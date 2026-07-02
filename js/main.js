@@ -136,6 +136,7 @@ const Main = {
     this.syncUserAvatar();
     this.receiveSharedChat();
     if (window.MemoryPlugin) window.MemoryPlugin.init().catch(console.error);
+    this.checkVideoDownloaderStatus();
     if (window.LocalAIPlugin) {
       window.LocalAIPlugin.discoverModels().then(models => {
         if (models.length > 0) {
@@ -1092,6 +1093,70 @@ const Main = {
       UI.toast('خطأ في استلام المحادثة', 'error');
     }
   },
+  isVideoDownloaderConnected: false,
+  async checkVideoDownloaderStatus() {
+    const check = async () => {
+        try {
+            const res = await fetch('http://localhost:5000/status', { signal: AbortSignal.timeout(2000) });
+            if (res.ok) {
+                this.isVideoDownloaderConnected = true;
+                const wrapper = document.getElementById('video-downloader-wrapper');
+                if (wrapper) wrapper.style.display = 'none';
+            } else {
+                this.isVideoDownloaderConnected = false;
+            }
+        } catch (e) {
+            this.isVideoDownloaderConnected = false;
+            const wrapper = document.getElementById('video-downloader-wrapper');
+            if (wrapper) wrapper.style.display = 'block';
+        }
+    };
+    await check();
+    setInterval(check, 10000);
+  },
+  async triggerVideoDownload(url, type, msgId) {
+    if (!this.isVideoDownloaderConnected) return;
+    try {
+        const res = await fetch('http://localhost:5000/download', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ url, type })
+        });
+        const data = await res.json();
+        if (data.job_id) {
+            const el = document.getElementById('media-player-' + msgId);
+            if (el) el.innerHTML = '<div style="color:var(--accent);">جاري التحميل... يرجى الانتظار</div>';
+            this.pollVideoProgress(data.job_id, msgId, type);
+        }
+    } catch (e) {
+        UI.toast('فشل التحميل', 'error');
+    }
+  },
+  async pollVideoProgress(jobId, msgId, type) {
+      const el = document.getElementById('media-player-' + msgId);
+      const poll = setInterval(async () => {
+          try {
+              const res = await fetch('http://localhost:5000/progress/' + jobId);
+              const data = await res.json();
+              if (data.status === 'downloading' && el) {
+                  el.innerHTML = `<div style="color:var(--accent);">جاري التحميل... ${data.progress}%</div>`;
+              } else if (data.status === 'completed' && el) {
+                  clearInterval(poll);
+                  const fileUrl = 'http://localhost:5000/stream/' + encodeURIComponent(data.file);
+                  if (type === 'audio') {
+                      el.innerHTML = `<audio controls style="width:100%;"><source src="${fileUrl}" type="audio/mpeg"></audio><div style="text-align:center; margin-top:8px;"><a href="${fileUrl}" download class="btn" style="padding:4px 12px; font-size:12px;">تنزيل الصوت</a></div>`;
+                  } else {
+                      el.innerHTML = `<video controls style="width:100%; border-radius:8px;"><source src="${fileUrl}" type="video/mp4"></video><div style="text-align:center; margin-top:8px;"><a href="${fileUrl}" download class="btn" style="padding:4px 12px; font-size:12px;">تنزيل الفيديو</a></div>`;
+                  }
+              } else if (data.status === 'error' && el) {
+                  clearInterval(poll);
+                  el.innerHTML = `<div style="color:red;">حدث خطأ أثناء التحميل</div>`;
+              }
+          } catch (e) {
+              clearInterval(poll);
+          }
+      }, 2000);
+  },
   async sendMessage() {
     if (this.isLoading) return;
     const input = document.getElementById('chat-input');
@@ -1135,6 +1200,21 @@ const Main = {
     this.appendMessage(userMsg, true);
     this.updateNavUI();
     if (!this.isIncognito) this.autoTitleChat();
+
+    // Video Downloader Interceptor
+    if (this.isVideoDownloaderConnected && (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com'))) {
+        const msgId = Date.now().toString();
+        const aiMsg = { 
+            role: 'assistant', 
+            content: `لقد اكتشفت رابط فيديو.\n[UI_WIDGET:VIDEO_DOWNLOAD:${msgId}:${text}]`, 
+            time: this.now() 
+        };
+        this.messages.push(aiMsg);
+        this.appendMessage(aiMsg, true);
+        this.saveData();
+        return;
+    }
+
     const activeChatId = this.currentChatId;
     this.isLoading = true;
     document.getElementById('send-btn').disabled = true;
@@ -1315,7 +1395,21 @@ const Main = {
     const div = document.createElement('div');
     div.className = `msg-wrap ${isUser ? 'user' : ''}`;
     let htmlContent = '';
-    if (!isUser && msg.content && msg.content.includes('[UI_WIDGET:API_KEY_REQ:')) {
+    if (!isUser && msg.content && msg.content.includes('[UI_WIDGET:VIDEO_DOWNLOAD:')) {
+        const match = msg.content.match(/\[UI_WIDGET:VIDEO_DOWNLOAD:([^:]+):(.+?)\]/);
+        if (match) {
+            const wId = match[1];
+            const wUrl = match[2];
+            htmlContent = `
+            <div>لقد اكتشفت رابط فيديو. ما الذي تود فعله؟</div>
+            <div id="media-player-${wId}" class="media-player-widget" style="padding:16px;">
+               <div style="display:flex; gap:12px; justify-content:center;">
+                  <button class="btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">تحميل فيديو عالي الجودة</button>
+                  <button class="btn" onclick="Main.triggerVideoDownload('${wUrl}', 'audio', '${wId}')">تحميل الصوت فقط</button>
+               </div>
+            </div>`;
+        }
+    } else if (!isUser && msg.content && msg.content.includes('[UI_WIDGET:API_KEY_REQ:')) {
       const match = msg.content.match(/\[UI_WIDGET:API_KEY_REQ:([^\]]+)\]/);
       if (match) {
         let keyName = modelFamily.toUpperCase();
@@ -1676,6 +1770,12 @@ const Main = {
   voiceTimerInterval: null,
   voiceSeconds: 0,
   async toggleVoice() {
+    const aiUser = localStorage.getItem('ai_user');
+    if (!aiUser || JSON.parse(aiUser).type === 'guest') {
+      UI.toast('يجب تسجيل الدخول لاستخدام ميزة التسجيل الصوتي', 'error');
+      setTimeout(() => window.location.href = 'login.html', 2000);
+      return;
+    }
     if (this.isListening) {
       this.stopVoice();
       return;
