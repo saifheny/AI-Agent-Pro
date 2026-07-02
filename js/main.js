@@ -1724,6 +1724,8 @@ const Main = {
         this.recognition.start();
       }
       document.getElementById('input-row-main').style.display = 'none';
+      const inputContainer = document.getElementById('chat-input-container');
+      if (inputContainer) inputContainer.style.display = 'none';
       document.getElementById('voice-record-ui').style.display = 'flex';
       const waveContainer = document.getElementById('voice-wave-container');
       waveContainer.innerHTML = Array.from({length: 30}, () => '<div class="voice-wave-bar"></div>').join('');
@@ -1793,6 +1795,8 @@ const Main = {
     const mainRow = document.getElementById('input-row-main');
     const voiceUi = document.getElementById('voice-record-ui');
     if (mainRow) mainRow.style.display = 'flex';
+    const inputContainer = document.getElementById('chat-input-container');
+    if (inputContainer) inputContainer.style.display = 'flex';
     if (voiceUi) voiceUi.style.display = 'none';
   },
   _addVoiceAsAttachment(audioBlob, audioUrl) {
