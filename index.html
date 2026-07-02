@@ -71,9 +71,8 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/mobile.css">
   <link rel="manifest" href="manifest.json">
-  <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
-  <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+  <link rel="icon" type="image/png" href="ai_avatar.png">
+  <link rel="apple-touch-icon" href="ai_avatar.png">
   <style>
     @keyframes modelPulse {
 
@@ -196,7 +195,7 @@
     </button>
     <div class="float-model" onclick="UI.showModal('model-picker-modal')" title="تغيير النموذج">
       <span class="mobile-model-dot"></span>
-      <span id="mobile-current-model">GPT-5.5</span>
+      <span id="mobile-current-model">AI Agent Pro</span>
     </div>
     <button type="button" class="mobile-float-btn float-right" onclick="UI.toggleSidebar()" aria-label="المحادثات"
       style="right:14px; pointer-events:auto;"><i data-lucide="menu" style="width:22px;height:22px"></i></button>
@@ -539,11 +538,19 @@
             <div class="welcome" id="welcome-screen">
               <div class="welcome-icon"
                 style="background: transparent; border: none; padding: 0; display:flex; justify-content:center; margin-bottom: 24px;">
-                <img src="ai_avatar.png" alt="AI Agent Avatar" style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 0 40px rgba(99,102,241,0.5), 0 0 80px rgba(236,72,153,0.3); animation: avatarGlow 3s infinite alternate; object-fit: cover;">
+                <img src="ai_avatar.png" alt="AI Agent Avatar" style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); object-fit: cover;">
               </div>
               <h1 class="typewriter-text" id="welcome-title">مرحباً بك في AI Agent Pro ✨</h1>
               <p style="animation: fadeIn 1s ease 2.8s both;">المنصة المتكاملة للذكاء الاصطناعي. اسأل، برمج، حلل
                 البيانات، وأنجز مهامك بكفاءة عالية.</p>
+              
+              <div style="margin: 20px 0; text-align: center;">
+                <a href="video_downloader.py" download="video_downloader.py" class="btn primary" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(236,72,153,0.2); border: 1px solid rgba(236,72,153,0.5); color: #fff; padding: 10px 20px; border-radius: 20px; text-decoration: none; font-size: 14px; transition: all 0.3s ease;">
+                  <i data-lucide="download" style="width: 18px; height: 18px; color: #EC4899;"></i>
+                  أداة تحميل الفيديوهات (YouTube, TikTok)
+                </a>
+              </div>
+
               <div class="quick-prompts">
                 <!-- Dynamically generated via JS -->
               </div>
@@ -579,7 +586,7 @@
                   <div class="in-chat-model-selector mobile-hidden" onclick="UI.showModal('model-picker-modal')"
                     style="cursor:pointer; display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); padding:4px 12px; border-radius:20px; font-size:12px; color:var(--text2); transition:all 0.2s;">
                     <i data-lucide="zap" style="width:14px;height:14px;color:var(--accent)"></i>
-                    <span id="current-model-display">GPT-5.5</span>
+                    <span id="current-model-display">AI Agent Pro</span>
                     <i data-lucide="chevron-down" style="width:14px;height:14px;opacity:0.5"></i>
                   </div>
                 </div>

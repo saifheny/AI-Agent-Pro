@@ -1135,8 +1135,11 @@ const Main = {
     this.appendMessage(userMsg, true);
     this.updateNavUI();
     if (!this.isIncognito) this.autoTitleChat();
+    const activeChatId = this.currentChatId;
     this.isLoading = true;
     document.getElementById('send-btn').disabled = true;
+    document.getElementById('chat-input').disabled = true;
+    document.getElementById('chat-input').placeholder = 'انتظر حتى يرد المساعد...';
     const typingUI = this.showTyping();
     try {
       const apiMessages = [{ role: 'system', content: this.systemPrompts[this.currentMode] || this.systemPrompts['general'] }];
@@ -1153,15 +1156,10 @@ const Main = {
           const searchResults = await SearchPlugin.search(text, taskType === 'RESEARCH' ? 'scientific' : 'general');
           const filtered = SearchPlugin.filterResults(searchResults);
           if (filtered.length > 0) {
-          const searchContext = filtered.map(r => `[المصدر: ${r.source}] ${r.title}
-${r.content}
-رابط: ${r.url}`).join('\n\n');
+          const searchContext = filtered.map(r => `[المصدر: ${r.source}] ${r.title}\n${r.content}\nرابط: ${r.url}`).join('\n\n');
             apiMessages.push({
               role: 'system',
-          content: `--- نتائج البحث المباشر (2026) ---
-${searchContext}
-
-أجب بدقة بناءً على المعلومات أعلاه.`
+              content: `--- نتائج البحث المباشر (2026) ---\n${searchContext}\n\nأجب بدقة بناءً على المعلومات أعلاه.`
             });
           }
         } else {
@@ -1171,15 +1169,14 @@ ${searchContext}
       if (window.MemoryPlugin) {
         const recalled = await MemoryPlugin.recall(text);
         if (recalled.length > 0) {
-            apiMessages.push({ role: 'system', content: `--- من الذاكرة ---
-${recalled.map(f => f.content).join('\n')}` });
+            apiMessages.push({ role: 'system', content: `--- من الذاكرة ---\n${recalled.map(f => f.content).join('\n')}` });
         }
       }
       if (this.uploadedFiles.length > 0) {
         let fileContext = '';
         for (const f of this.uploadedFiles) {
           const content = await FilePlugin.processFile(f);
-          fileContext += `[محتوى الملف: ${f.name}]\\n${content}\\n\\n`;
+          fileContext += `[محتوى الملف: ${f.name}]\n${content}\n\n`;
         }
         apiMessages.push({ role: 'system', content: fileContext });
       }
@@ -1187,13 +1184,21 @@ ${recalled.map(f => f.content).join('\n')}` });
       if (!apiKey && family !== 'local' && family !== 'pollinations') {
         typingUI.remove();
         const noKeyMsg = { role: 'assistant', content: `[UI_WIDGET:API_KEY_REQ:${family}]`, time: this.now() };
-        this.messages.push(noKeyMsg);
-        this.appendMessage(noKeyMsg, true);
+        if (this.currentChatId === activeChatId) {
+            this.messages.push(noKeyMsg);
+            this.appendMessage(noKeyMsg, true);
+        } else {
+            const chat = this.chats.find(c => c.id === activeChatId);
+            if (chat) chat.messages.push(noKeyMsg);
+        }
         this.isLoading = false;
         document.getElementById('send-btn').disabled = false;
         return;
       }
-      apiMessages.push(...this.messages.map(m => ({ role: m.role, content: m.content })));
+      
+      let chatMsgs = this.currentChatId === activeChatId ? this.messages : (this.chats.find(c => c.id === activeChatId)?.messages || []);
+      apiMessages.push(...chatMsgs.map(m => ({ role: m.role, content: m.content })));
+      
       const temp = parseFloat(document.getElementById('temp-slider')?.value) || 0.7;
       const maxTok = parseInt(document.getElementById('max-tokens')?.value) || 4096;
       let aiContent = '';
@@ -1215,25 +1220,28 @@ ${recalled.map(f => f.content).join('\n')}` });
       }
       typingUI.remove();
       const aiMsg = { role: 'assistant', content: aiContent, time: this.now() };
-      this.messages.push(aiMsg);
-      this.appendMessage(aiMsg, true);
-      // Auto-generate title for new chats
-      if (this.messages.length === 2 && !this.isIncognito) {
-        this.generateChatTitle(this.currentChatId, text);
+      
+      if (this.currentChatId === activeChatId) {
+          this.messages.push(aiMsg);
+          this.appendMessage(aiMsg, true);
+      } else {
+          const chat = this.chats.find(c => c.id === activeChatId);
+          if (chat) chat.messages.push(aiMsg);
+      }
+
+      if (chatMsgs.length === 2 && !this.isIncognito) {
+        this.generateChatTitle(activeChatId, text);
       }
       if (window.MemoryPlugin && aiContent.length > 100) {
         MemoryPlugin.saveFact(aiContent, [actualModelId]);
       }
     } catch (err) {
-      // Auto-retry logic — try up to 3 times silently
       if (!this._retryCount) this._retryCount = 0;
       this._retryCount++;
       if (this._retryCount <= 3) {
         typingUI.remove();
-        console.warn(`Retry ${this._retryCount}/3: ${err.message}`);
         const retryTyping = this.showTyping();
         try {
-          // If free model failed 3 times, try user's API model
           let retryConfig = this.getApiConfig();
           if (this._retryCount === 3) {
             const apiModels = this.models.filter(m => !m.free && this.getApiKeyForFamily(m.family));
@@ -1245,7 +1253,8 @@ ${recalled.map(f => f.content).join('\n')}` });
           const { apiUrl: rUrl, apiKey: rKey, actualModelId: rModel, family: rFamily } = retryConfig;
           if (rKey || rFamily === 'pollinations') {
             const retryMsgs = [{ role: 'system', content: this.systemPrompts[this.currentMode] || this.systemPrompts['general'] }];
-            retryMsgs.push(...this.messages.map(m => ({ role: m.role, content: m.content })));
+            let chatMsgs = this.currentChatId === activeChatId ? this.messages : (this.chats.find(c => c.id === activeChatId)?.messages || []);
+            retryMsgs.push(...chatMsgs.map(m => ({ role: m.role, content: m.content })));
             const rResp = await fetch(rUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${rKey}` },
@@ -1256,29 +1265,49 @@ ${recalled.map(f => f.content).join('\n')}` });
               const rContent = this.parseAIResponse(rFamily, rData);
               retryTyping.remove();
               const aiMsg = { role: 'assistant', content: rContent, time: this.now() };
-              this.messages.push(aiMsg);
-              this.appendMessage(aiMsg, true);
+              
+              if (this.currentChatId === activeChatId) {
+                  this.messages.push(aiMsg);
+                  this.appendMessage(aiMsg, true);
+              } else {
+                  const chat = this.chats.find(c => c.id === activeChatId);
+                  if (chat) chat.messages.push(aiMsg);
+              }
+              
               this._retryCount = 0;
               this.uploadedFiles = [];
               this.saveData();
               this.isLoading = false;
               document.getElementById('send-btn').disabled = false;
+              if (this.currentChatId === activeChatId) {
+                  document.getElementById('chat-input').disabled = false;
+                  document.getElementById('chat-input').placeholder = 'اسأل AI Agent Pro...';
+              }
               return;
             }
           }
           retryTyping.remove();
-        } catch(e2) { /* silent */ }
+        } catch(e2) { }
       }
       this._retryCount = 0;
       typingUI.remove();
       const errMsg = { role: 'assistant', content: `عذراً، حدث خطأ تقني. يرجى المحاولة مرة أخرى أو تغيير النموذج.\n\n<small style="color:var(--text3)">التفاصيل: ${err.message}</small>`, time: this.now() };
-      this.messages.push(errMsg);
-      this.appendMessage(errMsg, true);
+      if (this.currentChatId === activeChatId) {
+          this.messages.push(errMsg);
+          this.appendMessage(errMsg, true);
+      } else {
+          const chat = this.chats.find(c => c.id === activeChatId);
+          if (chat) chat.messages.push(errMsg);
+      }
     }
     this.uploadedFiles = [];
     this.saveData();
     this.isLoading = false;
     document.getElementById('send-btn').disabled = false;
+    if (this.currentChatId === activeChatId) {
+        document.getElementById('chat-input').disabled = false;
+        document.getElementById('chat-input').placeholder = 'اسأل AI Agent Pro...';
+    }
   },
   appendMessage(msg, animate) {
     const container = document.getElementById('messages');
