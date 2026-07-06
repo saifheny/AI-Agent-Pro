@@ -6,7 +6,7 @@ import re
 
 def install_requirements():
     print("جاري التحقق من المتطلبات الأساسية للخادم...")
-    reqs = ["yt-dlp", "flask", "flask-cors"]
+    reqs = ["yt-dlp", "flask", "flask-cors", "imageio-ffmpeg"]
     for req in reqs:
         pkg = req.replace("-", "_")
         try:
@@ -23,6 +23,7 @@ try:
     from flask import Flask, request, jsonify, send_from_directory
     from flask_cors import CORS
     import yt_dlp
+    import imageio_ffmpeg
 except Exception as e:
     print(f"فشل في استيراد المكتبات: {e}")
     input("اضغط Enter للخروج...")
@@ -98,6 +99,7 @@ def download_video():
             'quiet':      True,
             'no_warnings':True,
             'merge_output_format': 'mp4',
+            'ffmpeg_location': imageio_ffmpeg.get_ffmpeg_exe(),
         }
 
         if type_ == 'audio':
