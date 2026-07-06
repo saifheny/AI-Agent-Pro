@@ -137,16 +137,16 @@ const Main = {
     this.receiveSharedChat();
     if (window.MemoryPlugin) window.MemoryPlugin.init().catch(console.error);
     this.checkVideoDownloaderStatus();
-    if (window.LocalAIPlugin) {
-      window.LocalAIPlugin.discoverModels().then(models => {
-        if (models.length > 0) {
-          console.log('[Main] Local models discovered:', models);
-          this.ALL_MODELS.local.models = [...this.ALL_MODELS.local.models.filter(m => m.actualId !== '__custom__'), ...models];
-          UI.toast(`تم اكتشاف ${models.length} نماذج محلية`, 'info');
-          if (typeof UI.renderModelPicker === 'function') UI.renderModelPicker();
-        }
-      });
-    }
+    // if (window.LocalAIPlugin) {
+    //   window.LocalAIPlugin.discoverModels().then(models => {
+    //     if (models.length > 0) {
+    //       console.log('[Main] Local models discovered:', models);
+    //       this.ALL_MODELS.local.models = [...this.ALL_MODELS.local.models.filter(m => m.actualId !== '__custom__'), ...models];
+    //       UI.toast(`تم اكتشاف ${models.length} نماذج محلية`, 'info');
+    //       if (typeof UI.renderModelPicker === 'function') UI.renderModelPicker();
+    //     }
+    //   });
+    // }
     const msgRoot = document.getElementById('messages');
     if (msgRoot) {
       msgRoot.addEventListener('click', (e) => {
