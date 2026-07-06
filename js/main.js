@@ -1096,66 +1096,179 @@ const Main = {
   isVideoDownloaderConnected: false,
   async checkVideoDownloaderStatus() {
     const check = async () => {
-        try {
-            const res = await fetch('http://localhost:5000/status', { signal: AbortSignal.timeout(2000) });
-            if (res.ok) {
-                this.isVideoDownloaderConnected = true;
-                const wrapper = document.getElementById('video-downloader-wrapper');
-                if (wrapper) wrapper.style.display = 'none';
-            } else {
-                this.isVideoDownloaderConnected = false;
-            }
-        } catch (e) {
-            this.isVideoDownloaderConnected = false;
-            const wrapper = document.getElementById('video-downloader-wrapper');
-            if (wrapper) wrapper.style.display = 'block';
+      try {
+        const res = await fetch('http://localhost:5000/status', { signal: AbortSignal.timeout(2000) });
+        if (res.ok) {
+          this.isVideoDownloaderConnected = true;
+          const wrapper = document.getElementById('video-downloader-wrapper');
+          if (wrapper) wrapper.style.display = 'none';
+        } else {
+          this.isVideoDownloaderConnected = false;
         }
+      } catch (e) {
+        this.isVideoDownloaderConnected = false;
+        const wrapper = document.getElementById('video-downloader-wrapper');
+        if (wrapper) wrapper.style.display = 'block';
+      }
     };
     await check();
     setInterval(check, 10000);
   },
-  async triggerVideoDownload(url, type, msgId) {
-    if (!this.isVideoDownloaderConnected) return;
+  async fetchVideoInfo(url) {
     try {
-        const res = await fetch('http://localhost:5000/download', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ url, type })
-        });
-        const data = await res.json();
-        if (data.job_id) {
-            const el = document.getElementById('media-player-' + msgId);
-            if (el) el.innerHTML = '<div style="color:var(--accent);">جاري التحميل... يرجى الانتظار</div>';
-            this.pollVideoProgress(data.job_id, msgId, type);
-        }
+      const res = await fetch('http://localhost:5000/info', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url })
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch (e) { return null; }
+  },
+  buildVideoWidget(wId, wUrl, info) {
+    const title = (info && info.title) ? info.title : '';
+    const thumb = (info && info.thumbnail) ? info.thumbnail : '';
+    const dur = (info && info.duration) ? ` • ${Math.floor(info.duration/60)}:${String(info.duration%60).padStart(2,'0')}` : '';
+    const thumbHtml = thumb
+      ? `<img class="vid-thumb" src="${thumb}" alt="" onerror="this.style.display='none'">`
+      : `<div class="vid-thumb-placeholder">▶️</div>`;
+    const qualities = ['1080p', '720p', '480p', '360p'];
+    const qualityBtns = qualities.map((q, i) =>
+      `<button class="vid-quality-btn${i===1?' active':''}" data-q="${q}" onclick="Main.selectVideoQuality('${wId}', this)">${q}</button>`
+    ).join('');
+    return `
+      <div class="video-download-widget" id="video-widget-${wId}">
+        ${thumbHtml}
+        <div class="vid-meta">
+          ${title ? `<div class="vid-title">${title}${dur}</div>` : ''}
+          <a class="vid-url-link" href="${wUrl}" target="_blank" rel="noopener">${wUrl}</a>
+          <div class="vid-quality-row" id="quality-row-${wId}">${qualityBtns}</div>
+        </div>
+        <div class="vid-action-row">
+          <button class="vid-download-btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">&#x2B07; تحميل فيديو</button>
+          <button class="vid-download-btn secondary" onclick="Main.triggerVideoDownload('${wUrl}', 'audio', '${wId}')">&#x1F3A7; صوت فقط</button>
+        </div>
+        <div id="media-player-${wId}"></div>
+      </div>`;
+  },
+  selectVideoQuality(wId, btn) {
+    const row = document.getElementById('quality-row-' + wId);
+    if (!row) return;
+    row.querySelectorAll('.vid-quality-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  },
+  getSelectedQuality(wId) {
+    const row = document.getElementById('quality-row-' + wId);
+    if (!row) return '720p';
+    const active = row.querySelector('.vid-quality-btn.active');
+    return active ? active.dataset.q : '720p';
+  },
+  async triggerVideoDownload(url, type, msgId) {
+    if (!this.isVideoDownloaderConnected) {
+      UI.toast('تأكد من تشغيل أداة التحميل على جهازك', 'error');
+      return;
+    }
+    const quality = type === 'video' ? this.getSelectedQuality(msgId) : null;
+    const el = document.getElementById('media-player-' + msgId);
+    if (el) el.innerHTML = `
+      <div class="video-progress-bar-wrap">
+        <div class="video-progress-bar-outer"><div class="video-progress-bar-inner" id="pbar-${msgId}" style="width:2%"></div></div>
+        <div class="video-progress-label" id="plabel-${msgId}">جاري التحميل... يرجى الانتظار</div>
+      </div>`;
+    try {
+      const res = await fetch('http://localhost:5000/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, type, quality })
+      });
+      if (!res.ok) { UI.toast('فشل بدء التحميل', 'error'); return; }
+      const data = await res.json();
+      if (data.job_id) {
+        this.pollVideoProgress(data.job_id, msgId, type);
+      } else {
+        if (el) el.innerHTML = `<div style="color:var(--red);padding:12px">خطأ: ${data.error||'تعذر بدء التحميل'}</div>`;
+      }
     } catch (e) {
-        UI.toast('فشل التحميل', 'error');
+      if (el) el.innerHTML = `<div style="color:var(--red);padding:12px">خطأ في الاتصال بالخادم المحلي</div>`;
     }
   },
-  async pollVideoProgress(jobId, msgId, type) {
-      const el = document.getElementById('media-player-' + msgId);
-      const poll = setInterval(async () => {
-          try {
-              const res = await fetch('http://localhost:5000/progress/' + jobId);
-              const data = await res.json();
-              if (data.status === 'downloading' && el) {
-                  el.innerHTML = `<div style="color:var(--accent);">جاري التحميل... ${data.progress}%</div>`;
-              } else if (data.status === 'completed' && el) {
-                  clearInterval(poll);
-                  const fileUrl = 'http://localhost:5000/stream/' + encodeURIComponent(data.file);
-                  if (type === 'audio') {
-                      el.innerHTML = `<audio controls style="width:100%;"><source src="${fileUrl}" type="audio/mpeg"></audio><div style="text-align:center; margin-top:8px;"><a href="${fileUrl}" download class="btn" style="padding:4px 12px; font-size:12px;">تنزيل الصوت</a></div>`;
-                  } else {
-                      el.innerHTML = `<video controls style="width:100%; border-radius:8px;"><source src="${fileUrl}" type="video/mp4"></video><div style="text-align:center; margin-top:8px;"><a href="${fileUrl}" download class="btn" style="padding:4px 12px; font-size:12px;">تنزيل الفيديو</a></div>`;
-                  }
-              } else if (data.status === 'error' && el) {
-                  clearInterval(poll);
-                  el.innerHTML = `<div style="color:red;">حدث خطأ أثناء التحميل</div>`;
-              }
-          } catch (e) {
-              clearInterval(poll);
+  pollVideoProgress(jobId, msgId, type) {
+    const el = document.getElementById('media-player-' + msgId);
+    const pbar = document.getElementById('pbar-' + msgId);
+    const plabel = document.getElementById('plabel-' + msgId);
+    const poll = setInterval(async () => {
+      try {
+        const res = await fetch('http://localhost:5000/progress/' + jobId);
+        if (!res.ok) { clearInterval(poll); return; }
+        const data = await res.json();
+        if (data.status === 'downloading') {
+          const pct = Math.round(data.progress || 0);
+          if (pbar) pbar.style.width = Math.max(pct, 2) + '%';
+          if (plabel) plabel.textContent = `جاري التحميل... ${pct}%`;
+        } else if (data.status === 'completed') {
+          clearInterval(poll);
+          if (!data.file) { if(el) el.innerHTML='<div style="padding:12px;color:var(--red)">تم التحميل لكن فشل تحديد الملف</div>'; return; }
+          const fileUrl = 'http://localhost:5000/stream/' + encodeURIComponent(data.file);
+          const fname = data.file;
+          if (el) {
+            if (type === 'audio') {
+              el.innerHTML = `
+                <div class="video-media-result">
+                  <audio controls autoplay style="width:100%; border-radius:8px;">
+                    <source src="${fileUrl}" type="audio/mpeg">
+                    <source src="${fileUrl}" type="audio/webm">
+                    متصفحك لا يدعم التشغيل.
+                  </audio>
+                  <div class="result-actions">
+                    <a href="${fileUrl}" download="${fname}" class="vid-download-btn primary" style="text-decoration:none;text-align:center;">&#x2B07; تنزيل الصوت</a>
+                  </div>
+                </div>`;
+            } else {
+              el.innerHTML = `
+                <div class="video-media-result">
+                  <video controls autoplay style="width:100%; border-radius:8px;">
+                    <source src="${fileUrl}" type="video/mp4">
+                    متصفحك لا يدعم التشغيل.
+                  </video>
+                  <div class="result-actions">
+                    <a href="${fileUrl}" download="${fname}" class="vid-download-btn primary" style="text-decoration:none;text-align:center;">&#x2B07; تنزيل الفيديو</a>
+                  </div>
+                </div>`;
+            }
           }
-      }, 2000);
+        } else if (data.status === 'error') {
+          clearInterval(poll);
+          if (el) el.innerHTML = `<div style="color:var(--red);padding:12px">خطأ: ${data.error||'تعذر التحميل'}</div>`;
+        }
+      } catch (e) { clearInterval(poll); }
+    }, 1500);
+  },
+  async handleVideoUrl(url, msgId) {
+    const el = document.getElementById('media-player-' + msgId);
+    if (!el) return;
+    el.innerHTML = '<div style="padding:12px; color:var(--text3)">جاري جلب معلومات الفيديو...</div>';
+    const info = await this.fetchVideoInfo(url);
+    const widget = document.getElementById('video-widget-' + msgId);
+    if (widget && info) {
+      const title = info.title || '';
+      const thumb = info.thumbnail || '';
+      const dur = info.duration ? ` • ${Math.floor(info.duration/60)}:${String(info.duration%60).padStart(2,'0')}` : '';
+      if (title) {
+        const titleEl = widget.querySelector('.vid-title');
+        if (titleEl) titleEl.textContent = title + dur;
+      }
+      if (thumb) {
+        const oldThumb = widget.querySelector('.vid-thumb-placeholder');
+        if (oldThumb) {
+          const img = document.createElement('img');
+          img.className = 'vid-thumb';
+          img.src = thumb;
+          img.onerror = () => img.style.display = 'none';
+          oldThumb.replaceWith(img);
+        }
+      }
+    }
+    if (el) el.innerHTML = '';
   },
   async sendMessage() {
     if (this.isLoading) return;
@@ -1399,15 +1512,10 @@ const Main = {
         const match = msg.content.match(/\[UI_WIDGET:VIDEO_DOWNLOAD:([^:]+):(.+?)\]/);
         if (match) {
             const wId = match[1];
-            const wUrl = match[2];
-            htmlContent = `
-            <div>لقد اكتشفت رابط فيديو. ما الذي تود فعله؟</div>
-            <div id="media-player-${wId}" class="media-player-widget" style="padding:16px;">
-               <div style="display:flex; gap:12px; justify-content:center;">
-                  <button class="btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">تحميل فيديو عالي الجودة</button>
-                  <button class="btn" onclick="Main.triggerVideoDownload('${wUrl}', 'audio', '${wId}')">تحميل الصوت فقط</button>
-               </div>
-            </div>`;
+            const wUrl = match[2].trim();
+            htmlContent = `<div style="margin-bottom:6px;font-size:13px;color:var(--text2);">اكتشفت رابط فيديو &mdash; اختر ما تريد:</div>` + this.buildVideoWidget(wId, wUrl, null);
+            // auto-fetch video info after render
+            setTimeout(() => this.handleVideoUrl(wUrl, wId), 300);
         }
     } else if (!isUser && msg.content && msg.content.includes('[UI_WIDGET:API_KEY_REQ:')) {
       const match = msg.content.match(/\[UI_WIDGET:API_KEY_REQ:([^\]]+)\]/);

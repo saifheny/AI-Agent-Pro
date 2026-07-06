@@ -402,20 +402,20 @@ body {
   overflow-x: hidden;
 }
 .nav-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent), var(--accent3));
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   margin-bottom: 24px;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.4), 0 0 40px rgba(139, 92, 246, 0.15);
-  transition: transform 0.3s, box-shadow 0.3s;
+  transition: opacity 0.2s;
 }
 .nav-logo:hover {
-  transform: scale(1.08);
-  box-shadow: 0 4px 25px rgba(59, 130, 246, 0.5), 0 0 50px rgba(139, 92, 246, 0.2);
+  opacity: 0.85;
+  transform: none;
+  box-shadow: none;
 }
 .nav-icons {
   display: flex;
@@ -6543,5 +6543,156 @@ body.theme-light .floating-top-controls {
   padding: 12px;
   display: flex;
   gap: 8px;
+  justify-content: center;
+}
+
+/* Message area bottom padding so input doesn't overlap */
+#messages {
+  padding-bottom: 30px !important;
+}
+
+/* Remove ALL hover glow/shadow from every interactive element */
+button:hover, .icon-btn:hover, .nav-btn:hover, .btn:hover, .in-chat-model-selector:hover {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* Fix nav-logo avatar: static, no animation */
+.nav-logo img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: block;
+  animation: none !important;
+  transform: none !important;
+}
+
+/* Video widget: clean card look */
+.video-download-widget {
+  margin-top: 12px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: rgba(255,255,255,0.03);
+}
+.video-download-widget .vid-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  display: block;
+}
+.video-download-widget .vid-thumb-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: rgba(255,255,255,0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255,255,255,0.2);
+  font-size: 40px;
+}
+.video-download-widget .vid-meta {
+  padding: 12px 14px 8px;
+}
+.video-download-widget .vid-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.video-download-widget .vid-url-link {
+  font-size: 12px;
+  color: #60a5fa;
+  text-decoration: none;
+  display: block;
+  margin-bottom: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.video-download-widget .vid-url-link:hover { text-decoration: underline; }
+.video-download-widget .vid-quality-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.video-download-widget .vid-quality-btn {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.2);
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.video-download-widget .vid-quality-btn.active,
+.video-download-widget .vid-quality-btn:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: rgba(255,255,255,0.35);
+  box-shadow: none !important;
+}
+.video-download-widget .vid-action-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+}
+.video-download-widget .vid-download-btn {
+  flex: 1;
+  padding: 8px 0;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity 0.15s;
+}
+.video-download-widget .vid-download-btn:hover { opacity: 0.85; box-shadow: none !important; }
+.video-download-widget .vid-download-btn.primary {
+  background: var(--accent);
+  color: #fff;
+}
+.video-download-widget .vid-download-btn.secondary {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+}
+.video-progress-bar-wrap {
+  padding: 12px 14px;
+}
+.video-progress-bar-outer {
+  height: 6px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.video-progress-bar-inner {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 6px;
+  width: 0%;
+  transition: width 0.4s ease;
+}
+.video-progress-label {
+  font-size: 12px;
+  color: var(--text3);
+  margin-top: 6px;
+}
+.video-media-result {
+  padding: 12px 14px;
+}
+.video-media-result video,
+.video-media-result audio {
+  width: 100%;
+  border-radius: 8px;
+  outline: none;
+}
+.video-media-result .result-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
   justify-content: center;
 }
