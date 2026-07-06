@@ -1375,8 +1375,9 @@ body.density-compact .messages {
 }
 .msg-attachments-wrap {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 12px;
 }
 .voice-bubble-premium {
@@ -6548,7 +6549,7 @@ body.theme-light .floating-top-controls {
 
 /* Message area bottom padding so input doesn't overlap */
 #messages {
-  padding-bottom: 30px !important;
+  padding-bottom: 150px !important;
 }
 
 /* Remove ALL hover glow/shadow from every interactive element */

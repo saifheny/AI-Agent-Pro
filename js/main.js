@@ -1128,27 +1128,48 @@ const Main = {
     } catch (e) { return null; }
   },
   buildVideoWidget(wId, wUrl, info) {
+    const isLocal = this.isVideoDownloaderConnected;
     const title = (info && info.title) ? info.title : '';
     const thumb = (info && info.thumbnail) ? info.thumbnail : '';
     const dur = (info && info.duration) ? ` • ${Math.floor(info.duration/60)}:${String(info.duration%60).padStart(2,'0')}` : '';
-    const thumbHtml = thumb
-      ? `<img class="vid-thumb" src="${thumb}" alt="" onerror="this.style.display='none'">`
-      : `<div class="vid-thumb-placeholder">▶️</div>`;
+    
+    // Extract YouTube ID for iframe if possible
+    let ytId = '';
+    const ytMatch = wUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^"&?\/\s]{11})/);
+    if (ytMatch) ytId = ytMatch[1];
+    
+    const embedHtml = ytId && !isLocal 
+      ? `<iframe width="100%" height="250" src="https://www.youtube.com/embed/${ytId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:12px; margin-bottom:12px;"></iframe>` 
+      : (thumb ? `<img class="vid-thumb" src="${thumb}" alt="" onerror="this.style.display='none'">` : `<div class="vid-thumb-placeholder">▶️</div>`);
+
     const qualities = ['1080p', '720p', '480p', '360p'];
     const qualityBtns = qualities.map((q, i) =>
       `<button class="vid-quality-btn${i===1?' active':''}" data-q="${q}" onclick="Main.selectVideoQuality('${wId}', this)">${q}</button>`
     ).join('');
+    
+    let actionRow = '';
+    if (isLocal) {
+      actionRow = `
+        <div class="vid-quality-row" id="quality-row-${wId}">${qualityBtns}</div>
+        <div class="vid-action-row">
+          <button class="vid-download-btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">&#x2B07; تحميل فيديو (محلي)</button>
+          <button class="vid-download-btn secondary" onclick="Main.triggerVideoDownload('${wUrl}', 'audio', '${wId}')">&#x1F3A7; صوت فقط</button>
+        </div>`;
+    } else {
+      actionRow = `
+        <div class="vid-action-row" style="flex-direction:column; gap:8px;">
+          <a href="https://cobalt.tools/?u=${encodeURIComponent(wUrl)}" target="_blank" class="vid-download-btn primary" style="text-decoration:none; text-align:center; display:block;">&#x2B07; تحميل السحابي السريع (للموبايل)</a>
+          <div style="font-size:11px; color:var(--text3); text-align:center;">قم بتشغيل الخادم المحلي (video_downloader.py) للتحميل والدمج الداخلي</div>
+        </div>`;
+    }
+
     return `
       <div class="video-download-widget" id="video-widget-${wId}">
-        ${thumbHtml}
+        ${embedHtml}
         <div class="vid-meta">
           ${title ? `<div class="vid-title">${title}${dur}</div>` : ''}
           <a class="vid-url-link" href="${wUrl}" target="_blank" rel="noopener">${wUrl}</a>
-          <div class="vid-quality-row" id="quality-row-${wId}">${qualityBtns}</div>
-        </div>
-        <div class="vid-action-row">
-          <button class="vid-download-btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">&#x2B07; تحميل فيديو</button>
-          <button class="vid-download-btn secondary" onclick="Main.triggerVideoDownload('${wUrl}', 'audio', '${wId}')">&#x1F3A7; صوت فقط</button>
+          ${actionRow}
         </div>
         <div id="media-player-${wId}"></div>
       </div>`;
@@ -1247,6 +1268,11 @@ const Main = {
   },
   async handleVideoUrl(url, msgId) {
     const el = document.getElementById('media-player-' + msgId);
+    
+    // If local server is not connected, skip fetching info from it.
+    // The widget already embeds iframe.
+    if (!this.isVideoDownloaderConnected) return;
+
     if (!el) return;
     el.innerHTML = '<div style="padding:12px; color:var(--text3)">جاري جلب معلومات الفيديو...</div>';
     const info = await this.fetchVideoInfo(url);
@@ -1317,7 +1343,7 @@ const Main = {
     if (!this.isIncognito) this.autoTitleChat();
 
     // Video Downloader Interceptor
-    if (this.isVideoDownloaderConnected && (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com'))) {
+    if (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com')) {
         const msgId = Date.now().toString();
         const aiMsg = { 
             role: 'assistant', 
