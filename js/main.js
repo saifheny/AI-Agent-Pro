@@ -867,9 +867,11 @@ const Main = {
         const msgContainer = document.getElementById('messages');
         msgContainer.scrollTop += diff;
       }
-      const len = input.value.length;
-      document.getElementById('char-count').textContent = `${len} / 8000`;
-      document.getElementById('char-count').style.color = len > 7500 ? 'var(--red)' : 'var(--text3)';
+      const charCountEl = document.getElementById('char-count');
+      if (charCountEl) {
+        charCountEl.textContent = `${len} / 8000`;
+        charCountEl.style.color = len > 7500 ? 'var(--red)' : 'var(--text3)';
+      }
       // Stop meteors while typing
       document.body.classList.add('user-typing');
       

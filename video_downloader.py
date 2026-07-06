@@ -10,10 +10,13 @@ def install_requirements():
     for req in reqs:
         pkg = req.replace("-", "_")
         try:
+            if req == 'yt-dlp':
+                print("جاري تحديث yt-dlp لضمان التوافق...")
+                subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", "yt-dlp", "--quiet"])
             __import__(pkg)
         except ImportError:
             print(f"جاري تثبيت {req}...")
-            subprocess.check_call([sys.executable, "-m", "pip", "install", req, "--quiet"])
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", req, "--quiet"])
 
 try:
     install_requirements()
