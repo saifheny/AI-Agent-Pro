@@ -1128,40 +1128,23 @@ const Main = {
     } catch (e) { return null; }
   },
   buildVideoWidget(wId, wUrl, info) {
-    const isLocal = this.isVideoDownloaderConnected;
     const title = (info && info.title) ? info.title : '';
     const thumb = (info && info.thumbnail) ? info.thumbnail : '';
     const dur = (info && info.duration) ? ` • ${Math.floor(info.duration/60)}:${String(info.duration%60).padStart(2,'0')}` : '';
     
-    // Extract YouTube ID for iframe if possible
-    let ytId = '';
-    const ytMatch = wUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^"&?\/\s]{11})/);
-    if (ytMatch) ytId = ytMatch[1];
-    
-    const embedHtml = ytId && !isLocal 
-      ? `<iframe width="100%" height="250" src="https://www.youtube.com/embed/${ytId}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="border-radius:12px; margin-bottom:12px;"></iframe>` 
-      : (thumb ? `<img class="vid-thumb" src="${thumb}" alt="" onerror="this.style.display='none'">` : `<div class="vid-thumb-placeholder">▶️</div>`);
+    const embedHtml = thumb ? `<img class="vid-thumb" src="${thumb}" alt="" onerror="this.style.display='none'">` : `<div class="vid-thumb-placeholder">▶️</div>`;
 
     const qualities = ['1080p', '720p', '480p', '360p'];
     const qualityBtns = qualities.map((q, i) =>
       `<button class="vid-quality-btn${i===1?' active':''}" data-q="${q}" onclick="Main.selectVideoQuality('${wId}', this)">${q}</button>`
     ).join('');
     
-    let actionRow = '';
-    if (isLocal) {
-      actionRow = `
+    const actionRow = `
         <div class="vid-quality-row" id="quality-row-${wId}">${qualityBtns}</div>
         <div class="vid-action-row">
-          <button class="vid-download-btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">&#x2B07; تحميل فيديو (محلي)</button>
+          <button class="vid-download-btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">&#x2B07; تحميل فيديو</button>
           <button class="vid-download-btn secondary" onclick="Main.triggerVideoDownload('${wUrl}', 'audio', '${wId}')">&#x1F3A7; صوت فقط</button>
         </div>`;
-    } else {
-      actionRow = `
-        <div class="vid-action-row" style="flex-direction:column; gap:8px;">
-          <a href="https://cobalt.tools/?u=${encodeURIComponent(wUrl)}" target="_blank" class="vid-download-btn primary" style="text-decoration:none; text-align:center; display:block;">&#x2B07; تحميل السحابي السريع (للموبايل)</a>
-          <div style="font-size:11px; color:var(--text3); text-align:center;">قم بتشغيل الخادم المحلي (video_downloader.py) للتحميل والدمج الداخلي</div>
-        </div>`;
-    }
 
     return `
       <div class="video-download-widget" id="video-widget-${wId}">
@@ -1230,34 +1213,13 @@ const Main = {
           if (plabel) plabel.textContent = `جاري التحميل... ${pct}%`;
         } else if (data.status === 'completed') {
           clearInterval(poll);
-          if (!data.file) { if(el) el.innerHTML='<div style="padding:12px;color:var(--red)">تم التحميل لكن فشل تحديد الملف</div>'; return; }
-          const fileUrl = 'http://localhost:5000/stream/' + encodeURIComponent(data.file);
-          const fname = data.file;
           if (el) {
-            if (type === 'audio') {
-              el.innerHTML = `
-                <div class="video-media-result">
-                  <audio controls autoplay style="width:100%; border-radius:8px;">
-                    <source src="${fileUrl}" type="audio/mpeg">
-                    <source src="${fileUrl}" type="audio/webm">
-                    متصفحك لا يدعم التشغيل.
-                  </audio>
-                  <div class="result-actions">
-                    <a href="${fileUrl}" download="${fname}" class="vid-download-btn primary" style="text-decoration:none;text-align:center;">&#x2B07; تنزيل الصوت</a>
-                  </div>
+             el.innerHTML = `
+                <div class="video-media-result" style="text-align:center; padding:16px;">
+                  <div style="font-size:24px; margin-bottom:8px;">✅</div>
+                  <div style="color:var(--text); font-weight:600; font-size:14px;">تم التحميل بنجاح!</div>
+                  <div style="color:var(--text3); font-size:12px; margin-top:4px;">تجد الملف في مجلد AI_Agent_Pro_Videos</div>
                 </div>`;
-            } else {
-              el.innerHTML = `
-                <div class="video-media-result">
-                  <video controls autoplay style="width:100%; border-radius:8px;">
-                    <source src="${fileUrl}" type="video/mp4">
-                    متصفحك لا يدعم التشغيل.
-                  </video>
-                  <div class="result-actions">
-                    <a href="${fileUrl}" download="${fname}" class="vid-download-btn primary" style="text-decoration:none;text-align:center;">&#x2B07; تنزيل الفيديو</a>
-                  </div>
-                </div>`;
-            }
           }
         } else if (data.status === 'error') {
           clearInterval(poll);
@@ -1343,7 +1305,7 @@ const Main = {
     if (!this.isIncognito) this.autoTitleChat();
 
     // Video Downloader Interceptor
-    if (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com')) {
+    if (this.isVideoDownloaderConnected && (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com'))) {
         const msgId = Date.now().toString();
         const aiMsg = { 
             role: 'assistant', 
