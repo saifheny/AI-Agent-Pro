@@ -236,13 +236,21 @@
     color: #fff;
   }
   #settings-modal .modal-footer {
-    display: none; /* Hide the bottom cancel button for full screen, we use the top X */
+    display: none;
   }
 </style>
 
 </head>
 
 <body class="theme-dark idle">
+<script>
+(function(){
+  if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768){
+    document.documentElement.innerHTML = '<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Agent Pro</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:32px}.c{max-width:360px}.ic{width:64px;height:64px;margin:0 auto 24px;border-radius:16px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center}h2{font-size:22px;font-weight:700;margin-bottom:12px}p{font-size:15px;color:#777;line-height:1.6}</style></head><body><div class="c"><div class="ic"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><h2>Desktop Only</h2><p>This platform is optimized for desktop and laptop devices. Please visit from a computer for the full experience.</p></div></body>';
+    throw new Error('MOBILE_BLOCKED');
+  }
+})();
+</script>
 
 
 

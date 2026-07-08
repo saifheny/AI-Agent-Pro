@@ -409,7 +409,14 @@
   </style>
 </head>
 <body>
-  
+<script>
+(function(){
+  if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768){
+    document.documentElement.innerHTML = '<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AI Agent Pro</title><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;color:#fff;font-family:Inter,-apple-system,system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;text-align:center;padding:32px}.c{max-width:360px}.ic{width:64px;height:64px;margin:0 auto 24px;border-radius:16px;background:rgba(255,255,255,0.05);display:flex;align-items:center;justify-content:center}h2{font-size:22px;font-weight:700;margin-bottom:12px}p{font-size:15px;color:#777;line-height:1.6}</style></head><body><div class="c"><div class="ic"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><h2>Desktop Only</h2><p>This platform is optimized for desktop and laptop devices. Please visit from a computer for the full experience.</p></div></body>';
+    throw new Error('MOBILE_BLOCKED');
+  }
+})();
+</script>
   <div class="login-split">
     
     <div class="login-brand">
@@ -447,7 +454,7 @@
         <div class="brand-logo">
           <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:52px;height:52px">
             <rect width="60" height="60" rx="16" fill="url(#loginGrad)"/>
-            <path d="M13 44 L20 18 L30 40 L40 18 L47 44" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <text x="30" y="38" text-anchor="middle" fill="white" font-family="Inter, sans-serif" font-weight="800" font-size="22">SA</text>
             <circle cx="30" cy="30" r="3.5" fill="white" opacity="0.5"/>
             <defs>
               <linearGradient id="loginGrad" x1="0" y1="0" x2="60" y2="60">
@@ -515,13 +522,12 @@
           </button>
         </div>
 
-        
-<div style="width: 100%; height: 30px; overflow: hidden; margin: 20px 0;">
-  <svg viewBox="0 0 500 150" preserveAspectRatio="none" style="height: 100%; width: 100%;">
-    <path d="M0.00,49.98 C149.99,150.00 349.20,-49.98 500.00,49.98 L500.00,150.00 L0.00,150.00 Z" style="stroke: none; fill: rgba(255,255,255,0.05);"></path>
-  </svg>
-</div>
-<div class="divider">أو عبر البريد الإلكتروني</div>
+        <div style="width:100%;height:24px;overflow:hidden;margin:8px 0;">
+          <svg viewBox="0 0 500 50" preserveAspectRatio="none" style="width:100%;height:100%;display:block;">
+            <path d="M0,25 C83,45 167,5 250,25 C333,45 417,5 500,25" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" fill="none"/>
+          </svg>
+        </div>
+        <div class="divider">or continue with email</div>
 
         <div id="nameWrap" style="display:none" class="input-group">
           <input class="f-input" placeholder="الاسم الكامل" id="fName">
@@ -550,7 +556,7 @@
           <span id="togTxt">ليس لديك حساب؟</span>
           <a onclick="togMode()" id="togLnk">إنشاء حساب جديد</a>
         </div>
-        <div class="terms-row">بتسجيل الدخول، أنت توافق على <a href="terms.html">شروط الاستخدام</a> و<a href="privacy.html">سياسة الخصوصية</a></div>
+        <div class="terms-row">By signing in, you agree to the <a href="terms.html">Terms of Use</a> and <a href="privacy.html">Privacy Policy</a></div>
       </div>
     </div>
   </div>
@@ -689,7 +695,18 @@
 
     // Theme toggle
     let isDark = true;
-     else {
+    function toggleTheme() {
+      isDark = !isDark;
+      const r = document.documentElement;
+      if (!isDark) {
+        r.style.setProperty('--bg', '#f1f5f9');
+        r.style.setProperty('--text', '#0f172a');
+        r.style.setProperty('--text2', '#334155');
+        r.style.setProperty('--text3', '#64748b');
+        r.style.setProperty('--glass', 'rgba(255,255,255,0.85)');
+        r.style.setProperty('--border', 'rgba(0,0,0,0.1)');
+        document.querySelector('.login-form-panel').style.background = 'rgba(248,250,252,0.98)';
+      } else {
         r.style.setProperty('--bg', '#030712');
         r.style.setProperty('--text', '#f9fafb');
         r.style.setProperty('--text2', '#d1d5db');

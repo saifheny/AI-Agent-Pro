@@ -1319,7 +1319,15 @@ const Main = {
     }
     
     const drawKeywords = ['ارسم ', 'تخيل ', 'صمم ', 'draw ', 'imagine ', 'generate image '];
+    
     if (drawKeywords.some(k => text.toLowerCase().startsWith(k)) || text.toLowerCase().trim() === 'ارسم') {
+        const userObj = JSON.parse(localStorage.getItem('user') || '{}');
+        if (userObj.type === 'guest') {
+            UI.toast('Image Generation is not available for guests. Please log in.', 'error');
+            this.isLoading = false;
+            return;
+        }
+
         const prompt = text;
         const imageUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
         const aiMsg = { 
@@ -1454,7 +1462,16 @@ const Main = {
           if (chat) chat.messages.push(aiMsg);
       }
 
+      
+      // Auto untoggle web search
+      const webToggleCb = document.getElementById('web-search-toggle');
+      if (webToggleCb && webToggleCb.checked) {
+          webToggleCb.checked = false;
+          document.getElementById('web-search-btn')?.classList.remove('active');
+      }
+
       if (chatMsgs.length === 2 && !this.isIncognito) {
+
         this.generateChatTitle(activeChatId, text);
       }
       if (window.MemoryPlugin && aiContent.length > 100) {
