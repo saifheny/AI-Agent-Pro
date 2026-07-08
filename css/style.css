@@ -877,8 +877,11 @@ body {
   box-shadow: 0 0 12px rgba(59, 130, 246, 0.45);
 }
 body.density-compact .msg-bubble {
+
   padding: 10px 14px !important;
   font-size: 14px !important;
+
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 body.density-compact .messages {
   gap: 14px !important;
@@ -1096,6 +1099,7 @@ body.density-compact .messages {
   align-items: flex-end;
 }
 .msg-bubble {
+
   line-height: 1.8;
   font-size: 16px;
   max-width: 100%;
@@ -1103,6 +1107,8 @@ body.density-compact .messages {
   transition: all var(--transition-fast);
   color: var(--text-primary);
   font-weight: 400;
+
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .msg-bubble.ai {
@@ -2737,7 +2743,10 @@ input:checked+.slider:before {
   z-index: 5;
 }
 .msg-bubble {
+
   position: relative;
+
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .msg-bubble:hover .msg-copy-btn {
   opacity: 1;
@@ -5850,7 +5859,10 @@ body.theme-light .messages {
 }
 
 body.theme-light .msg-bubble {
+
   color: #111111 !important;
+
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 body.theme-light .msg-bubble.user {
   background: #f0f4ff !important;
@@ -6354,6 +6366,7 @@ body {
     border-color: var(--accent);
 }
 .msg-bubble {
+
     backdrop-filter: blur(10px);
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.05);
@@ -6361,6 +6374,8 @@ body {
     word-break: break-word; /* Prevent text from breaking outside */
     overflow-wrap: break-word;
     max-width: 90%;
+
+  animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 .msg-bubble.user {
     background: rgba(40,40,40,0.8);
@@ -6696,4 +6711,19 @@ button:hover, .icon-btn:hover, .nav-btn:hover, .btn:hover, .in-chat-model-select
   gap: 8px;
   margin-top: 10px;
   justify-content: center;
+}
+@keyframes slideUpFade {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes aiGlowPulse {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+.icon-btn.active {
+  color: #3b82f6 !important;
+  background: rgba(59, 130, 246, 0.15) !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+  animation: aiGlowPulse 2s infinite;
 }

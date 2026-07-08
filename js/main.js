@@ -1317,6 +1317,28 @@ const Main = {
         this.saveData();
         return;
     }
+    // Image Generation Interceptor
+    const drawKeywords = ['ارسم ', 'تخيل ', 'صمم ', 'draw ', 'imagine ', 'generate image '];
+    if (drawKeywords.some(k => text.toLowerCase().startsWith(k)) || text.toLowerCase().trim() === 'ارسم') {
+        const prompt = text;
+        const imageUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
+        const aiMsg = { 
+            role: 'assistant', 
+            content: `إليك الصورة التي طلبتها:\n\n![${prompt}](${imageUrl})`, 
+            time: this.now() 
+        };
+        this.messages.push(aiMsg);
+        this.appendMessage(aiMsg, true);
+        this.saveData();
+        
+        input.value = '';
+        input.style.height = 'auto';
+        if (localStorage.getItem('autoscroll') !== 'false') {
+          const container = document.getElementById('messages');
+          setTimeout(() => container.scrollTop = container.scrollHeight, 100);
+        }
+        return;
+    }
 
     const activeChatId = this.currentChatId;
     this.isLoading = true;
@@ -1327,9 +1349,9 @@ const Main = {
     try {
       const apiMessages = [{ role: 'system', content: this.systemPrompts[this.currentMode] || this.systemPrompts['general'] }];
       const webToggle = document.getElementById('web-search-toggle');
-      let isWebSearch = (webToggle && webToggle.classList.contains('active'));
+      let isWebSearch = (webToggle && webToggle.checked);
       if (isWebSearch) {
-        const taskType = await RouterPlugin.analyze(text);
+        const taskType = typeof RouterPlugin !== 'undefined' ? await RouterPlugin.analyze(text) : 'general';
         const needsDeepSearch = taskType === 'RESEARCH' || text.toLowerCase().includes('بحث') || text.toLowerCase().includes('search');
         if (needsDeepSearch) {
           typingUI.querySelector('.typing-status-text').textContent = 'جاري استخدام الذكاء في البحث والتحليل العميق...';
@@ -1358,8 +1380,28 @@ const Main = {
       if (this.uploadedFiles.length > 0) {
         let fileContext = '';
         for (const f of this.uploadedFiles) {
-          const content = await FilePlugin.processFile(f);
-          fileContext += `[محتوى الملف: ${f.name}]\n${content}\n\n`;
+          if (f.type.startsWith('image/')) {
+             try {
+                typingUI.querySelector('.typing-status-text').textContent = 'جاري تحليل وقراءة الصورة...';
+                const formData = new FormData();
+                formData.append('base64image', f.content);
+                formData.append('language', 'ara');
+                const ocrRes = await fetch('https://api.ocr.space/parse/image', {
+                   method: 'POST',
+                   headers: { 'apikey': 'K83471013788957' },
+                   body: formData
+                });
+                const ocrData = await ocrRes.json();
+                if (ocrData && ocrData.ParsedResults && ocrData.ParsedResults[0]) {
+                   fileContext += `[تم استخراج هذا النص من الصورة المرفقة ${f.name}]:\n${ocrData.ParsedResults[0].ParsedText}\n\n`;
+                } else {
+                   fileContext += `[ملاحظة النظام: يوجد صورة مرفقة واسمها ${f.name} ولكن لم يتم التعرف على نصوص واضحة بداخلها]\n`;
+                }
+             } catch (e) { console.error('OCR Error', e); }
+          } else {
+             const content = typeof FilePlugin !== 'undefined' && FilePlugin.processFile ? await FilePlugin.processFile(f) : '';
+             fileContext += `[محتوى الملف: ${f.name}]\n${content}\n\n`;
+          }
         }
         apiMessages.push({ role: 'system', content: fileContext });
       }
@@ -2126,14 +2168,42 @@ const Main = {
     }
   },
   fallbackSpeak(text, btnEl) {
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ar-SA';
-    utterance.onend = () => {
-      if (btnEl) btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-      lucide.createIcons();
+    if (this.currentAudio && !this.currentAudio.paused) {
+      this.currentAudio.pause();
+    }
+    const cleanText = text.replace(/[*_#`~[\]]/g, '').trim();
+    const chunks = cleanText.match(/.{1,150}(?:\s|[.،؟!:]|$)/g) || [cleanText];
+    let index = 0;
+    const playNext = () => {
+      if (index >= chunks.length) {
+        if (btnEl) btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
+        lucide.createIcons();
+        return;
+      }
+      const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(chunks[index].trim()) + '&tl=ar&client=tw-ob';
+      this.currentAudio = new Audio(url);
+      this.currentAudio.onended = () => {
+        index++;
+        playNext();
+      };
+      this.currentAudio.onerror = () => {
+        const utterance = new SpeechSynthesisUtterance(chunks.slice(index).join(' '));
+        utterance.lang = 'ar-SA';
+        utterance.onend = () => {
+          if (btnEl) btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
+          lucide.createIcons();
+        };
+        window.speechSynthesis.speak(utterance);
+      };
+      this.currentAudio.play().catch(e => {
+         console.error('TTS error:', e);
+         const utterance = new SpeechSynthesisUtterance(chunks.slice(index).join(' '));
+         utterance.lang = 'ar-SA';
+         window.speechSynthesis.speak(utterance);
+      });
     };
-    window.speechSynthesis.speak(utterance);
-    UI.toast('جاري القراءة...', 'info');
+    UI.toast('جاري القراءة بصوت احترافي...', 'info');
+    playNext();
   },
   setMode(mode) {
     this.currentMode = mode;
