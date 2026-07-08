@@ -1,8 +1,4 @@
-/**
- * Search Plugin - Advanced Free Search System (2026 Edition)
- * Sources: DuckDuckGo, Wikipedia, arXiv, PubMed
- * No API Keys required.
- */
+
 
 const SearchPlugin = {
   name: 'search',
@@ -12,7 +8,7 @@ const SearchPlugin = {
     
     const results = [];
     
-    // Parallel fetching
+    
     const promises = [];
     
     if (type === 'general' || type === 'news') {
@@ -34,14 +30,11 @@ const SearchPlugin = {
     return allResults.flat().filter(r => r && r.content).slice(0, 10);
   },
 
-  /**
-   * DuckDuckGo search via HTML parsing (No API)
-   * Uses a fallback if CORS is blocked, or assumes a proxy is used in production.
-   */
+  
   async searchDuckDuckGo(query) {
     try {
-      // In a real browser-only app, we might need a public CORS proxy.
-      // We'll try the "lite" version which is easier to parse.
+      
+      
       const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
       
@@ -119,7 +112,7 @@ const SearchPlugin = {
 
   async searchPubMed(query) {
     try {
-      // PubMed requires two steps: esearch then esummary
+      
       const searchUrl = `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=${encodeURIComponent(query)}&retmode=json`;
       const searchRes = await fetch(searchUrl);
       const searchData = await searchRes.json();
@@ -150,7 +143,7 @@ const SearchPlugin = {
   },
 
   filterResults(results) {
-    // Remove spam or useless results
+    
     return results.filter(r => {
       if (!r.title || r.title.length < 5) return false;
       if (!r.content || r.content.length < 10) return false;

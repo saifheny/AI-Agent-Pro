@@ -18,7 +18,7 @@ const Canvas = {
     canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
     canvas.addEventListener('mouseout', this.stopDrawing.bind(this));
     
-    // Touch support
+    
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const touch = e.touches[0];
@@ -50,8 +50,8 @@ const Canvas = {
     canvas.width = parent.clientWidth;
     canvas.height = parent.clientHeight;
     
-    // Fill with background
-    this.ctx.fillStyle = '#0F172A'; // dark bg
+    
+    this.ctx.fillStyle = '#0F172A'; 
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
   },
 
@@ -86,7 +86,7 @@ const Canvas = {
   },
 
   clear() {
-    this.resize(); // resets and fills bg
+    this.resize(); 
   },
 
   setColor(c) {

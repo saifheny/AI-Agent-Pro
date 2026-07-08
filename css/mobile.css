@@ -171,7 +171,7 @@
 }
 
 
-/* ══════ MOBILE LIGHT MODE FIX ══════ */
+
 @media (max-width: 768px) {
     .floating-top-controls {
         background: transparent;

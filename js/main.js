@@ -137,16 +137,16 @@ const Main = {
     this.receiveSharedChat();
     if (window.MemoryPlugin) window.MemoryPlugin.init().catch(console.error);
     this.checkVideoDownloaderStatus();
-    // if (window.LocalAIPlugin) {
-    //   window.LocalAIPlugin.discoverModels().then(models => {
-    //     if (models.length > 0) {
-    //       console.log('[Main] Local models discovered:', models);
-    //       this.ALL_MODELS.local.models = [...this.ALL_MODELS.local.models.filter(m => m.actualId !== '__custom__'), ...models];
-    //       UI.toast(`تم اكتشاف ${models.length} نماذج محلية`, 'info');
-    //       if (typeof UI.renderModelPicker === 'function') UI.renderModelPicker();
-    //     }
-    //   });
-    // }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     const msgRoot = document.getElementById('messages');
     if (msgRoot) {
       msgRoot.addEventListener('click', (e) => {
@@ -215,7 +215,7 @@ const Main = {
   },
   quickPrompt(text) {
     if (this.isIncognito) {
-      this.toggleIncognito(); // Turn off incognito
+      this.toggleIncognito(); 
     }
     const input = document.getElementById('chat-input');
     if (input) {
@@ -282,7 +282,7 @@ const Main = {
       if (emailTop) emailTop.textContent = email;
       if (emailBot) emailBot.textContent = email;
 
-      // Handle sidebar footer for guest
+      
       const sidebarFooterBtn = document.getElementById('sidebar-profile-btn');
       if (sidebarFooterBtn) {
         if (isGuest) {
@@ -872,7 +872,7 @@ const Main = {
         charCountEl.textContent = `${len} / 8000`;
         charCountEl.style.color = len > 7500 ? 'var(--red)' : 'var(--text3)';
       }
-      // Stop meteors while typing
+      
       document.body.classList.add('user-typing');
       
       const incognitoBtn = document.getElementById('nav-incognito');
@@ -925,7 +925,7 @@ const Main = {
     }
     if (family === 'local') {
       let base = (document.getElementById('local-ai-url')?.value || localStorage.getItem('local_ai_base_url') || apiUrl).trim();
-      if (!/^https?:\/\//.test(base)) base = 'http://' + base;
+      if (!/^https?:\/\
       if (!base.endsWith('/v1/chat/completions') && !base.endsWith('/api/chat')) {
          base = base.replace(/\/$/, '') + '/v1/chat/completions';
       }
@@ -1231,8 +1231,8 @@ const Main = {
   async handleVideoUrl(url, msgId) {
     const el = document.getElementById('media-player-' + msgId);
     
-    // If local server is not connected, skip fetching info from it.
-    // The widget already embeds iframe.
+    
+    
     if (!this.isVideoDownloaderConnected) return;
 
     if (!el) return;
@@ -1281,7 +1281,7 @@ const Main = {
           </div>`;
           if (f.voiceTranscript) {
             text += '\n' + f.voiceTranscript;
-            // Removed displaying the transcript to the user per request
+            
           }
         } else if (f.type.startsWith('image/')) {
           attachmentsHtml += `<img src="${f.content}" alt="Attachment" style="width:100%; max-width:300px; border-radius:16px; display:block; margin-bottom:8px;">`;
@@ -1304,7 +1304,7 @@ const Main = {
     this.updateNavUI();
     if (!this.isIncognito) this.autoTitleChat();
 
-    // Video Downloader Interceptor
+    
     if (this.isVideoDownloaderConnected && (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com'))) {
         const msgId = Date.now().toString();
         const aiMsg = { 
@@ -1317,7 +1317,7 @@ const Main = {
         this.saveData();
         return;
     }
-    // Image Generation Interceptor
+    
     const drawKeywords = ['ارسم ', 'تخيل ', 'صمم ', 'draw ', 'imagine ', 'generate image '];
     if (drawKeywords.some(k => text.toLowerCase().startsWith(k)) || text.toLowerCase().trim() === 'ارسم') {
         const prompt = text;
@@ -1546,7 +1546,7 @@ const Main = {
             const wId = match[1];
             const wUrl = match[2].trim();
             htmlContent = `<div style="margin-bottom:6px;font-size:13px;color:var(--text2);">اكتشفت رابط فيديو &mdash; اختر ما تريد:</div>` + this.buildVideoWidget(wId, wUrl, null);
-            // auto-fetch video info after render
+            
             setTimeout(() => this.handleVideoUrl(wUrl, wId), 300);
         }
     } else if (!isUser && msg.content && msg.content.includes('[UI_WIDGET:API_KEY_REQ:')) {
@@ -1698,7 +1698,7 @@ const Main = {
     
     const textNodes = [];
     const walk = (node) => {
-      if (node.nodeType === 3) { // Text node
+      if (node.nodeType === 3) { 
         if (node.nodeValue.trim() !== '' || node.nodeValue.includes('\\n')) {
           textNodes.push(node);
         }
@@ -1710,7 +1710,7 @@ const Main = {
     
     textNodes.forEach(n => {
       n._originalText = n.nodeValue;
-      // Split into words, preserving spaces
+      
       n._words = n.nodeValue.split(/(\\s+)/);
       n.nodeValue = '';
     });
@@ -1731,7 +1731,7 @@ const Main = {
       const words = node._words;
       
       if (wordIndex < words.length) {
-        let chunk = 2; // Append multiple words for faster fluid typing
+        let chunk = 2; 
         let appended = '';
         for (let i = 0; i < chunk && wordIndex < words.length; i++) {
           appended += words[wordIndex];
@@ -1739,13 +1739,13 @@ const Main = {
         }
         node.nodeValue += appended;
         
-        // Smart Auto-scroll: only scroll if the user is already near the bottom
+        
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
         if (isAtBottom && localStorage.getItem('autoscroll') !== 'false') {
           container.scrollTop = container.scrollHeight;
         }
         
-        let delay = 10 + Math.random() * 20; // Slightly faster delay since we use words
+        let delay = 10 + Math.random() * 20; 
         setTimeout(type, delay);
       } else {
         nodeIndex++;
@@ -1894,7 +1894,7 @@ const Main = {
     const isGuest = localStorage.getItem('ai_user') === 'guest';
     if (isGuest) {
       UI.toast('أنت تستخدم كضيف، قم بإنشاء حساب للوصول لجميع الميزات', 'info');
-      // Prompt user to go to login page
+      
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 2000);
@@ -2255,7 +2255,7 @@ const Main = {
     const input = document.getElementById('chat-input');
     input.value = text;
     input.focus();
-    // Trigger auto-resize if needed
+    
     input.dispatchEvent(new Event('input'));
   },
   async regenerate() {

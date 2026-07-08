@@ -1,6 +1,4 @@
-/**
- * Virtual Browser Plugin - Simulates browser automation in the frontend
- */
+
 
 const BrowserPlugin = {
   name: 'browser',
@@ -20,7 +18,7 @@ const BrowserPlugin = {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
       
-      // Remove scripts and styles for cleaner text
+      
       doc.querySelectorAll('script, style, iframe, nav, footer').forEach(el => el.remove());
       
       this.pageContent = doc.body.innerText.replace(/\s+/g, ' ').trim().substring(0, 5000);
@@ -35,7 +33,7 @@ const BrowserPlugin = {
   },
 
   async performAction(action, target) {
-    // Simulating clicks/typing by searching for the target and "navigating" if it's a link
+    
     console.log(`[BrowserPlugin] Action: ${action} on ${target}`);
     return `Action ${action} on ${target} simulated. Content updated.`;
   }

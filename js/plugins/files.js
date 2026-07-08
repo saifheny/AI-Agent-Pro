@@ -1,6 +1,4 @@
-/**
- * File Processing Plugin - Extracts text from various formats in the browser
- */
+
 
 const FilePlugin = {
   name: 'files',

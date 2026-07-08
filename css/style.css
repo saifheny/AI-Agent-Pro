@@ -18,7 +18,7 @@ body {
   -webkit-text-size-adjust: 100%;
 }
 :root {
-  /* Core Colors - Dark Mode Default */
+  
   --bg-primary: #000000;
   --bg-secondary: #0a0a0a;
   --bg-surface: #111111;
@@ -52,7 +52,7 @@ body {
   --user-bubble-border: rgba(255, 255, 255, 0.08);
   --ai-bubble-bg: transparent;
   
-  /* Backward compatibility aliases */
+  
   --bg: var(--bg-primary);
   --bg2: var(--bg-secondary);
   --bg3: var(--bg-surface);
@@ -64,12 +64,12 @@ body {
   --pink: #ec4899;
   --indigo: #6366f1;
   
-  /* Sidebar & Layout */
+  
   --sidebar-w: 300px;
   --nav-w: 72px;
   --header-h: 64px;
   
-  /* Radii & Shadows */
+  
   --radius-xl: 32px;
   --radius-lg: 20px;
   --radius-md: 14px;
@@ -80,15 +80,15 @@ body {
   --shadow-premium: 0 25px 60px -12px rgba(0, 0, 0, 0.8);
   --shadow-glow: 0 0 30px rgba(59, 130, 246, 0.15);
   
-  /* Transitions */
+  
   --transition-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-fast: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   
-  /* Fonts */
+  
   --font-primary: 'Tajawal', 'Outfit', -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
   
-  /* Status Colors */
+  
   --green: #10b981;
   --red: #ef4444;
   --yellow: #f59e0b;
@@ -955,7 +955,7 @@ body.density-compact .messages {
   transform: translateZ(0);
   -webkit-overflow-scrolling: touch;
   will-change: scroll-position;
-  /* contain: layout style; removed to fix rendering bugs */
+  
 }
 @media (min-width: 1024px) {
   .messages {
@@ -1058,7 +1058,7 @@ body.density-compact .messages {
   margin: 0 auto;
   width: 100%;
   animation: msg-pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-  opacity: 1; /* Changed from 0 to 1 to fix disappearing messages */
+  opacity: 1; 
   transform-origin: bottom center;
   padding-bottom: 24px;
   visibility: visible !important;
@@ -1274,7 +1274,7 @@ body.density-compact .messages {
   height: 14px;
 }
 
-/* Mobile specific - Always show actions */
+
 @media (max-width: 1023px) {
   .msg-actions {
     opacity: 1 !important;
@@ -1848,7 +1848,7 @@ body.density-compact .messages {
   right: calc(var(--nav-w) + 20px);
   left: auto;
 }
-/* Header visibility controlled by new floating header rules at end of file */
+
 .mobile-header {
   display: none;
 }
@@ -4085,7 +4085,7 @@ body.theme-light ::-webkit-scrollbar-thumb {
 body.theme-light ::-webkit-scrollbar-thumb:hover {
   background: #94A3B8;
 }
-/* Meteors removed */
+
 .typewriter-text {
   display: inline-block;
   overflow: hidden;
@@ -4329,9 +4329,7 @@ body.theme-light ::-webkit-scrollbar-thumb:hover {
   border-color: var(--accent) !important;
 }
 
-/* ==============================
-   FLOATING HEADER — Glassmorphism
-   ============================== */
+
 .header {
   display: flex;
   position: sticky;
@@ -4364,27 +4362,20 @@ body.theme-light .header:hover {
   background: rgba(255, 255, 255, 0.85);
 }
 
-/* ==============================
-   INCOGNITO / PRIVATE MODE
-   — Only changes logo icon (JS handles it)
-   ============================== */
+
 body.incognito-mode .nav-logo {
   box-shadow: 0 0 20px rgba(139, 92, 246, 0.3);
   border: 1px solid rgba(139, 92, 246, 0.2);
 }
 
-/* ==============================
-   MESSAGE SPACING (no dividers)
-   ============================== */
+
 .msg-wrap {
   padding-bottom: 8px;
   margin-bottom: 8px;
   border-bottom: none !important;
 }
 
-/* ==============================
-   CHAT ITEM ACTIONS
-   ============================== */
+
 .chat-item-actions {
   display: flex;
   gap: 2px;
@@ -4411,9 +4402,7 @@ body.incognito-mode .nav-logo {
   color: var(--red);
 }
 
-/* ==============================
-   SIDEBAR ENHANCED
-   ============================== */
+
 .sidebar {
   background: rgba(5,5,10,0.95);
   backdrop-filter: blur(24px) saturate(180%);
@@ -4423,9 +4412,7 @@ body.theme-light .sidebar {
   background: rgba(248,250,252,0.95);
 }
 
-/* ==============================
-   MESSAGE BUBBLE HOVER ACTIONS
-   ============================== */
+
 .msg-actions {
   opacity: 0;
   transition: opacity 0.25s ease;
@@ -4443,9 +4430,7 @@ body.theme-light .sidebar {
   transform: translateY(-1px);
 }
 
-/* ==============================
-   TYPING INDICATOR ENHANCED
-   ============================== */
+
 .typing-indicator {
   background: rgba(255,255,255,0.03);
   border: 1px solid rgba(255,255,255,0.06);
@@ -4466,9 +4451,7 @@ body.theme-light .sidebar {
   animation: fadeIn 0.3s ease;
 }
 
-/* ==============================
-   INPUT AREA GLASSMORPHISM BOOST
-   ============================== */
+
 .input-box {
   background: rgba(10, 10, 15, 0.5);
   backdrop-filter: blur(32px) saturate(180%);
@@ -4487,9 +4470,7 @@ body.theme-light .input-box {
   box-shadow: 0 -4px 40px rgba(0,0,0,0.3), 0 0 0 1px rgba(59,130,246,0.08), 0 0 30px -10px rgba(59,130,246,0.12);
 }
 
-/* ==============================
-   PREMIUM SCROLL TO BOTTOM
-   ============================== */
+
 .scroll-bottom-btn {
   position: absolute;
   bottom: 100px;
@@ -4522,9 +4503,7 @@ body.theme-light .input-box {
   to { opacity: 1; transform: translateX(-50%) scale(1) translateY(0); }
 }
 
-/* ==============================
-   SMOOTH PAGE TRANSITIONS
-   ============================== */
+
 .main {
   animation: mainFadeIn 0.5s ease-out;
 }
@@ -4540,9 +4519,7 @@ body.theme-light .input-box {
   to { opacity: 1; transform: translateX(0); }
 }
 
-/* ==============================
-   WELCOME SCREEN ENHANCED
-   ============================== */
+
 .welcome-icon {
   animation: welcomeIconFloat 3s ease-in-out infinite;
 }
@@ -4566,9 +4543,7 @@ body.theme-light .input-box {
   opacity: 1;
 }
 
-/* ==============================
-   CODE BLOCKS PREMIUM
-   ============================== */
+
 .code-container-premium {
   border-radius: 14px;
   margin: 16px 0;
@@ -4632,9 +4607,7 @@ body.theme-light .input-box {
   background: transparent !important;
 }
 
-/* ==============================
-   NETWORK BAR
-   ============================== */
+
 .network-bar {
   position: fixed;
   top: 0;
@@ -4660,9 +4633,7 @@ body.theme-light .input-box {
   transform: translateY(0);
 }
 
-/* ==============================
-   TOAST ENHANCEMENTS
-   ============================== */
+
 .toast {
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
@@ -4677,9 +4648,7 @@ body.theme-light .input-box {
   border-left: 3px solid var(--accent);
 }
 
-/* ==============================
-   DROP OVERLAY PREMIUM
-   ============================== */
+
 #drop-overlay {
   position: fixed;
   inset: 0;
@@ -4709,9 +4678,7 @@ body.theme-light .input-box {
   font-family: var(--font-primary);
 }
 
-/* ==============================
-   HEADER VISIBILITY
-   ============================== */
+
 @media (max-width: 768px) {
   .header {
     display: none !important;
@@ -4723,9 +4690,7 @@ body.theme-light .input-box {
   }
 }
 
-/* ==============================
-   CHATGPT-STYLE BOTTOM SHEET LIST
-   ============================== */
+
 .sheet-list {
   display: flex;
   flex-direction: column;
@@ -4814,7 +4779,7 @@ body.theme-light .sheet-list-item:active {
   pointer-events: none;
 }
 
-/* Modern Settings UI Overrides */
+
 .settings-tabs {
   display: flex !important;
   background: rgba(0,0,0,0.2) !important;
@@ -4898,7 +4863,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   margin-bottom: 12px !important;
 }
 
-/* ===== Layout Wrapper ===== */
+
 .app-layout {
   display: flex;
   flex-direction: row;
@@ -4909,7 +4874,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   background: var(--bg-primary);
 }
 
-/* ===== Desktop Layout (>=1024px) ===== */
+
 @media (min-width: 1024px) {
   .nav {
     display: flex !important;
@@ -4959,7 +4924,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   }
 }
 
-/* ===== Mobile Layout (<1024px) ===== */
+
 @media (max-width: 1023px) {
   .app-layout {
     flex-direction: column !important;
@@ -5001,7 +4966,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
 }
 
 
-/* ===== Layout Wrapper ===== */
+
 .app-layout {
   display: flex;
   flex-direction: row;
@@ -5012,7 +4977,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   background: var(--bg-primary);
 }
 
-/* ===== Desktop Layout (>=1024px) ===== */
+
 @media (min-width: 1024px) {
   .nav {
     display: flex !important;
@@ -5062,7 +5027,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   }
 }
 
-/* ===== Mobile Layout (<1024px) ===== */
+
 @media (max-width: 1023px) {
   .app-layout {
     flex-direction: column !important;
@@ -5104,7 +5069,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
 }
 
 
-/* Sidebar Toggle Button - Premium */
+
 .sidebar-toggle-btn {
   width: 36px !important;
   height: 36px !important;
@@ -5124,7 +5089,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   box-shadow: 0 4px 20px rgba(139,92,246,0.3);
 }
 
-/* Search Bar Panel - Premium Redesign */
+
 .search-bar-panel {
   background: var(--bg-secondary) !important;
   border-bottom: 1px solid var(--border-primary) !important;
@@ -5160,7 +5125,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   padding: 8px 0 !important;
 }
 
-/* Premium Nav Buttons */
+
 .nav-btn {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
@@ -5171,7 +5136,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   transform: scale(1.05);
 }
 
-/* Settings Modal Tabs - Fix */
+
 .settings-tab {
   cursor: pointer;
   padding: 10px 16px;
@@ -5193,7 +5158,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   background: var(--bg-surface);
 }
 
-/* Company panels in settings - solid background */
+
 .company-panel {
   background: var(--bg-surface) !important;
   border-radius: 12px;
@@ -5202,7 +5167,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   border: 1px solid var(--border-primary);
 }
 
-/* Smooth message animations */
+
 .msg-wrap {
   animation: msgSlideIn 0.3s ease-out;
 }
@@ -5211,7 +5176,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Sidebar - Premium styling */
+
 .sidebar {
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.1) transparent;
@@ -5227,7 +5192,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   border-radius: 4px;
 }
 
-/* Desktop sidebar collapsed - animate to 0 width */
+
 @media (min-width: 1024px) {
   .sidebar.collapsed {
     width: 0 !important;
@@ -5240,7 +5205,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   }
 }
 
-/* --- Premium Mobile Sidebar Overhaul --- */
+
 @media (max-width: 1023px) {
   .sidebar {
     background: rgba(10, 10, 12, 0.8) !important;
@@ -5265,7 +5230,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
     gap: 15px !important;
   }
 
-  /* Chat History Items - Ultra Clean */
+  
   .history-item {
     margin: 4px 12px !important;
     padding: 12px 16px !important;
@@ -5290,7 +5255,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
     opacity: 0.8;
   }
 
-  /* Floating New Chat Button in Sidebar */
+  
   .sidebar-new-chat {
     background: linear-gradient(135deg, #3b82f6, #8b5cf6) !important;
     color: white !important;
@@ -5339,7 +5304,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
 
 
 
-/* Sidebar History Items - Prevent Stacking */
+
 #chat-list {
   display: flex !important;
   flex-direction: column !important;
@@ -5367,14 +5332,14 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   transform: translateX(-5px) !important;
 }
 
-/* Search bar cleanup */
+
 .search-bar-inner {
   background: rgba(255, 255, 255, 0.05) !important;
   border-radius: 12px !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
-/* Clean Search Bar inside Sidebar */
+
 .sidebar-header input[type="text"] {
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -5448,18 +5413,18 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   opacity: 1 !important;
 }
 
-/* Mobile/Desktop Visibility Utils */
+
 @media (min-width: 1024px) {
   .mobile-only { display: none !important; }
   .desktop-only { display: block !important; }
 }
 @media (max-width: 1023px) {
-  .mobile-only { display: flex !important; } /* or block depending on flex */
+  .mobile-only { display: flex !important; } 
   .sidebar-header.mobile-only { display: flex !important; flex-direction: column !important; }
   .desktop-only { display: none !important; }
 }
 
-/* Chat Item Truncation for Narrow Sidebar */
+
 .chat-item-title {
   max-width: 200px !important;
   white-space: nowrap !important;
@@ -5467,7 +5432,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   text-overflow: ellipsis !important;
 }
 
-/* Remove hover glow on mobile sidebar icons */
+
 .sidebar-no-hover {
   transition: none !important;
 }
@@ -5477,7 +5442,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   box-shadow: none !important;
 }
 
-/* Make Chat Item Options (Three Dots) Always Visible on Mobile */
+
 @media (max-width: 1023px) {
   .chat-item-actions {
     opacity: 1 !important;
@@ -5498,7 +5463,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
 
 
 
-/* Ensure the app name is top, user name bottom */
+
 .desktop-only .sidebar-app-name {
   font-weight: 800;
   font-size: 18px;
@@ -5508,7 +5473,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   display: block;
 }
 
-/* Make chat item three dots visible on desktop too (not just hover) */
+
 .chat-item-actions {
   opacity: 1 !important;
   position: relative !important;
@@ -5526,7 +5491,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
 }
 
 
-/* Modal constraints for desktop to prevent stretching */
+
 @media (min-width: 769px) {
   .full-page-mobile {
     width: 100% !important;
@@ -5540,7 +5505,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   }
 }
 
-/* Arrow pointing from search icon to search bar in mobile header */
+
 #mobile-search-container {
   border-top: 1px solid rgba(255,255,255,0.05);
   padding-top: 10px;
@@ -5549,14 +5514,14 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   content: '';
   position: absolute;
   top: 2px;
-  right: 60px; /* roughly under the search icon */
+  right: 60px; 
   border-width: 0 8px 8px 8px;
   border-style: solid;
   border-color: transparent transparent rgba(255,255,255,0.05) transparent;
   display: block;
 }
 
-/* Styling for the 3 top header icons on mobile to look like ChatGPT (black glowing circles) */
+
 .mobile-header-circle-btn {
   width: 40px !important;
   height: 40px !important;
@@ -5578,7 +5543,7 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
   background: rgba(255,255,255,0.1) !important;
 }
 
-/* CRITICAL BLACK SCREEN FIX */
+
 .messages {
   opacity: 1 !important;
   visibility: visible !important;
@@ -5591,9 +5556,9 @@ body.theme-light .settings-input:focus, body.theme-light .settings-select:focus 
 }
 
 
-/* ═══════════════════════════════════════════════════ */
-/* PHASE 6: Comprehensive Light Mode Overrides        */
-/* ═══════════════════════════════════════════════════ */
+
+
+
 
 body.theme-light {
   background-color: #ffffff;
@@ -5836,7 +5801,7 @@ body.theme-light ::-webkit-scrollbar-thumb:hover {
 }
 
 
-/* ══════ COMPREHENSIVE LIGHT MODE FIX ══════ */
+
 
 body.theme-light {
   background: #ffffff !important;
@@ -6352,7 +6317,7 @@ body.theme-light .editor-header-bar {
 body.theme-light .network-bar {
   color: #ffffff !important;
 }
-/* ===== 2026 AI Agent Pro Aesthetics Override (Clean, Flat, No Glow) ===== */
+
 body {
     background: var(--bg-primary);
 }
@@ -6370,8 +6335,8 @@ body {
     backdrop-filter: blur(10px);
     border-radius: 12px;
     border: 1px solid rgba(255,255,255,0.05);
-    padding-bottom: 24px !important; /* Added space for like/dislike buttons */
-    word-break: break-word; /* Prevent text from breaking outside */
+    padding-bottom: 24px !important; 
+    word-break: break-word; 
     overflow-wrap: break-word;
     max-width: 90%;
 
@@ -6417,7 +6382,7 @@ body {
     background: var(--accent2) !important;
 }
 
-/* ===== 2026 Light Mode Complete Fix ===== */
+
 body.theme-light {
   background: #ffffff !important;
 }
@@ -6531,7 +6496,7 @@ body.theme-light .floating-top-controls {
   border-color: rgba(0,0,0,0.08) !important;
 }
 
-/* Advanced Media Player Widget */
+
 .media-player-widget {
   background: var(--bg-surface);
   border: 1px solid rgba(255,255,255,0.1);
@@ -6562,18 +6527,18 @@ body.theme-light .floating-top-controls {
   justify-content: center;
 }
 
-/* Message area bottom padding so input doesn't overlap */
+
 #messages {
   padding-bottom: 150px !important;
 }
 
-/* Remove ALL hover glow/shadow from every interactive element */
+
 button:hover, .icon-btn:hover, .nav-btn:hover, .btn:hover, .in-chat-model-selector:hover {
   box-shadow: none !important;
   text-shadow: none !important;
 }
 
-/* Fix nav-logo avatar: static, no animation */
+
 .nav-logo img {
   width: 36px;
   height: 36px;
@@ -6583,7 +6548,7 @@ button:hover, .icon-btn:hover, .nav-btn:hover, .btn:hover, .in-chat-model-select
   transform: none !important;
 }
 
-/* Video widget: clean card look */
+
 .video-download-widget {
   margin-top: 12px;
   border-radius: 14px;

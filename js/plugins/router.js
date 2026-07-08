@@ -1,6 +1,4 @@
-/**
- * AI Routing System - Smart Tool Selector and Task Analyzer
- */
+
 
 const RouterPlugin = {
   name: 'router',
@@ -8,8 +6,8 @@ const RouterPlugin = {
   async analyze(query) {
     const q = query.toLowerCase();
     
-    // Simple heuristic-based routing for speed, 
-    // can be upgraded to an LLM call for "Smart Routing"
+    
+    
     
     const taskTypes = {
       CODING: ['code', 'برمجة', 'أكواد', 'javascript', 'python', 'html', 'css', 'react', 'node', 'sql', 'database', 'api', 'json', 'function', 'bug', 'fix', 'develop', 'برمجة', 'موقع'],
@@ -48,7 +46,7 @@ const RouterPlugin = {
         break;
       
       case 'AUTOMATION':
-        // Simulating browser automation
+        
         result.toolUsed = 'browser';
         result.data = "The user wants to navigate the web. Suggesting browser actions.";
         break;

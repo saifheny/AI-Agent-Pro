@@ -41,7 +41,7 @@ const UI = {
     this.allThemes.forEach(t => document.body.classList.remove(t));
     document.body.classList.add('theme-' + name);
     
-    // Update theme-color meta tag
+    
     const themeColor = name === 'dark' ? '#000000' : '#ffffff';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
     
@@ -140,13 +140,13 @@ const UI = {
   },
   updateAccountStats() {
     try {
-      // Count chats
+      
       const chats = JSON.parse(localStorage.getItem('chats') || '[]');
       const chatCount = Array.isArray(chats) ? chats.length : 0;
       const el1 = document.getElementById('account-stat-chats');
       if (el1) el1.textContent = chatCount;
 
-      // Count messages
+      
       let msgCount = 0;
       if (Array.isArray(chats)) {
         chats.forEach(c => { if (c.messages) msgCount += c.messages.length; });
@@ -154,7 +154,7 @@ const UI = {
       const el2 = document.getElementById('account-stat-msgs');
       if (el2) el2.textContent = msgCount;
 
-      // Count API keys
+      
       let keyCount = 0;
       ['openai','gemini','anthropic','groq','mistral','deepseek','alibaba','xai','perplexity'].forEach(p => {
         const keys = JSON.parse(localStorage.getItem('api_keys_' + p) || '[]');
@@ -163,11 +163,11 @@ const UI = {
       const el3 = document.getElementById('account-stat-keys');
       if (el3) el3.textContent = keyCount;
 
-      // Update theme text
+      
       const themeText = document.getElementById('theme-text');
       if (themeText) themeText.textContent = this.theme === 'dark' ? 'داكن' : 'فاتح';
 
-      // Update auth button based on login state
+      
       const authBtn = document.getElementById('dynamic-logout-btn');
       if (authBtn) {
         const isLoggedIn = typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser;

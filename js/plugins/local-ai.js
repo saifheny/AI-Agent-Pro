@@ -1,6 +1,4 @@
-/**
- * Local AI Plugin - Support for Ollama and LM Studio
- */
+
 
 const LocalAIPlugin = {
   name: 'local-ai',
@@ -41,7 +39,7 @@ const LocalAIPlugin = {
           }
         }
       } catch (e) {
-        // console.log(`[LocalAI] ${endpoint.name} not found at ${endpoint.url}`);
+        
       }
     }
     
