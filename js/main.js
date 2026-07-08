@@ -925,7 +925,7 @@ const Main = {
     }
     if (family === 'local') {
       let base = (document.getElementById('local-ai-url')?.value || localStorage.getItem('local_ai_base_url') || apiUrl).trim();
-      if (!/^https?:\/\
+      if (!/^https?:\/\//.test(base)) base = 'http://' + base;
       if (!base.endsWith('/v1/chat/completions') && !base.endsWith('/api/chat')) {
          base = base.replace(/\/$/, '') + '/v1/chat/completions';
       }
