@@ -1820,6 +1820,10 @@
     </div>
   </div>
 
+  <div id="image-lightbox" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); z-index:99999; justify-content:center; align-items:center; flex-direction:column;">
+    <button onclick="document.getElementById('image-lightbox').style.display='none'" style="position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:2;"><i data-lucide="x"></i></button>
+    <img id="lightbox-img" style="max-width:95vw; max-height:95vh; object-fit:contain; border-radius:8px;">
+  </div>
 </body>
 
 </html>

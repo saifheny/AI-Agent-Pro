@@ -410,6 +410,11 @@ const Main = {
   },
   handleFileSelection(file) {
     if (file.type.startsWith('image/')) {
+      const currentImages = this.uploadedFiles.filter(f => f.type.startsWith('image/')).length;
+      if (currentImages >= 4) {
+        UI.toast('عذراً، لا يمكن إرفاق أكثر من 4 صور في المرة الواحدة', 'error');
+        return;
+      }
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -1289,7 +1294,18 @@ const Main = {
     let payloadContent = null;
     let hasImages = false;
     if (this.uploadedFiles.length > 0) {
-      hasImages = this.uploadedFiles.some(f => f.type.startsWith('image/'));
+      const images = this.uploadedFiles.filter(f => f.type.startsWith('image/'));
+      hasImages = images.length > 0;
+      
+      let imgGridHtml = '';
+      if (images.length > 0) {
+        imgGridHtml = `<div class="image-grid count-${Math.min(images.length, 4)}">`;
+        images.slice(0, 4).forEach(f => {
+          imgGridHtml += `<img src="${f.content}" alt="Attachment" onclick="Main.openLightbox('${f.content}')">`;
+        });
+        imgGridHtml += '</div>';
+      }
+
       this.uploadedFiles.forEach(f => {
         if (f.isVoice) {
           const bars = Array.from({ length: 30 }, () => `<div class="voice-wave-bar" style="height:${4 + Math.random() * 16}px"></div>`).join('');
@@ -1298,16 +1314,13 @@ const Main = {
             <div class="voice-wave-visualizer">${bars}</div>
             <span style="font-size:10px;margin-right:8px;opacity:0.7;">${Math.floor(f.voiceDuration/60).toString().padStart(2,'0')}:${(f.voiceDuration%60).toString().padStart(2,'0')}</span>
           </div>`;
-          if (f.voiceTranscript) {
-            text += '\n' + f.voiceTranscript;
-            
-          }
-        } else if (f.type.startsWith('image/')) {
-          attachmentsHtml += `<img src="${f.content}" alt="Attachment" style="width:100%; max-width:300px; border-radius:16px; display:block; margin-bottom:8px;">`;
-        } else {
+          if (f.voiceTranscript) text += '\n' + f.voiceTranscript;
+        } else if (!f.type.startsWith('image/')) {
           attachmentsHtml += `<div class="attachment-chip"><i data-lucide="file" style="width:12px;height:12px"></i> ${this.escHtml(f.name)}</div>`;
         }
       });
+      
+      if (imgGridHtml) attachmentsHtml = imgGridHtml + attachmentsHtml;
     }
     if (this.pendingVoiceBlob) {
       this.pendingVoiceBlob = null;
@@ -1729,8 +1742,8 @@ const Main = {
           <span class="msg-time">${msg.time}</span>
           ${!isUser ? `
           <div class="msg-actions">
-            <button class="msg-action-btn" title="أعجبني" onclick="UI.toast('شكرًا لتقييمك الإيجابي!', 'success')"><i data-lucide="thumbs-up" style="width:14px;height:14px"></i></button>
-            <button class="msg-action-btn" title="لم يعجبني" onclick="UI.toast('تم تسجيل التقييم لتطوير النظام', 'info')"><i data-lucide="thumbs-down" style="width:14px;height:14px"></i></button>
+            <button class="msg-action-btn like-btn" title="أعجبني" onclick="Main.toggleLike(this)"><i data-lucide="thumbs-up" style="width:14px;height:14px"></i></button>
+            <button class="msg-action-btn dislike-btn" title="لم يعجبني" onclick="Main.toggleDislike(this)"><i data-lucide="thumbs-down" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="نسخ" onclick="Main.copyBubbleText(this)"><i data-lucide="copy" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="قراءة الصوت" onclick="Main.speak(this)"><i data-lucide="volume-2" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="إعادة التوليد" onclick="Main.regenerate()"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
@@ -1750,6 +1763,28 @@ const Main = {
     
     if (localStorage.getItem('autoscroll') !== 'false') {
       container.scrollTop = container.scrollHeight;
+    }
+  },
+  toggleLike(btn) {
+    const parent = btn.closest('.msg-actions');
+    const dislikeBtn = parent.querySelector('.dislike-btn');
+    if (btn.classList.contains('active')) {
+      btn.classList.remove('active');
+    } else {
+      btn.classList.add('active');
+      if (dislikeBtn) dislikeBtn.classList.remove('active', 'dislike');
+      UI.toast('شكرًا لتقييمك الإيجابي!', 'success');
+    }
+  },
+  toggleDislike(btn) {
+    const parent = btn.closest('.msg-actions');
+    const likeBtn = parent.querySelector('.like-btn');
+    if (btn.classList.contains('active')) {
+      btn.classList.remove('active', 'dislike');
+    } else {
+      btn.classList.add('active', 'dislike');
+      if (likeBtn) likeBtn.classList.remove('active');
+      UI.toast('تم تسجيل التقييم لتطوير النظام', 'info');
     }
   },
   typeRealisticHTML(element, html) {
@@ -2150,17 +2185,27 @@ const Main = {
       console.log('Voice transcript ready:', this.pendingVoiceTranscript);
     }
   },
+  openLightbox(url) {
+    const lightbox = document.getElementById('image-lightbox');
+    const img = document.getElementById('lightbox-img');
+    if (lightbox && img) {
+      img.src = url;
+      lightbox.style.display = 'flex';
+      lucide.createIcons();
+    }
+  },
   playVoicePreview(btn) {
     this.playAudioMsg(btn, this.pendingVoiceUrl);
   },
   playAudioMsg(btn, url) {
     if (!url) return;
     const parent = btn.closest('.voice-message-premium') || btn.closest('.voice-preview-bar') || btn.closest('.attachment-item');
+    const playBtn = btn.classList.contains('voice-play-pause') || btn.classList.contains('voice-play-btn') ? btn : (btn.querySelector('.voice-play-pause') || btn.querySelector('.voice-play-btn') || btn);
     if (this.currentAudio && !this.currentAudio.paused) {
       this.currentAudio.pause();
       if (this.currentAudio.src.includes(url) || url.includes(this.currentAudio.src)) {
         this.currentAudio = null;
-        btn.innerHTML = '<i data-lucide="play" style="width:18px;height:18px"></i>';
+        playBtn.innerHTML = '<i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i>';
         if (parent) parent.classList.remove('playing');
         lucide.createIcons();
         return;
@@ -2175,7 +2220,7 @@ const Main = {
     }
     this.currentAudio = new Audio(url);
     this.currentAudio.play();
-    btn.innerHTML = '<i data-lucide="pause" style="width:18px;height:18px"></i>';
+    playBtn.innerHTML = '<i data-lucide="pause" style="width:16px;height:16px;margin-left:2px;"></i>';
     if (parent) parent.classList.add('playing');
     lucide.createIcons();
     
@@ -2199,7 +2244,7 @@ const Main = {
     requestAnimationFrame(updateWaveform);
 
     this.currentAudio.onended = () => {
-      btn.innerHTML = '<i data-lucide="play" style="width:18px;height:18px"></i>';
+      playBtn.innerHTML = '<i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i>';
       if (parent) {
         parent.classList.remove('playing');
         parent.querySelectorAll('.voice-wave-bar').forEach(bar => bar.style.opacity = '0.3');
