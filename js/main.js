@@ -1282,6 +1282,7 @@ const Main = {
     if (this.isLoading) return;
     const input = document.getElementById('chat-input');
     let text = input.value.trim();
+    const userTypedText = text;
     if (!text && !this.uploadedFiles.length && !this.pendingVoiceBlob) return;
     let displayHtml = text ? this.escHtml(text) : '';
     let attachmentsHtml = '';
@@ -1316,7 +1317,11 @@ const Main = {
     input.style.height = 'auto';
     document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('attachments-preview').style.display = 'none';
-    const userMsg = { role: 'user', content: text, display: displayHtml, time: this.now() };
+    const hasVoice = this.uploadedFiles.some(f => f.isVoice);
+    const hasImage = this.uploadedFiles.some(f => f.type.startsWith('image/'));
+    const isVoiceOnlyMsg = hasVoice && !hasImage && !userTypedText;
+    const isImageOnlyMsg = hasImage && !hasVoice && !userTypedText;
+    const userMsg = { role: 'user', content: text, display: displayHtml, time: this.now(), isVoiceOnly: isVoiceOnlyMsg, isImageOnly: isImageOnlyMsg };
     this.messages.push(userMsg);
     this.appendMessage(userMsg, true);
     this.updateNavUI();
@@ -1702,8 +1707,14 @@ const Main = {
     }
     const safeContent = encodeURIComponent(msg.content || '');
     const copyBtnHtml = !isUser ? `<button class="msg-copy-btn" onclick="Main.copyMessage(decodeURIComponent('${safeContent}'), this)" title="نسخ"><i data-lucide="copy" style="width:14px;height:14px"></i></button>` : '';
-    const isVoiceOnly = isUser && msg.display && msg.display.includes('voice-bubble-premium') && !msg.display.includes('<img');
-    const bubbleClass = isVoiceOnly ? 'msg-bubble user voice-only-bubble' : (isUser ? 'msg-bubble user' : 'msg-bubble ai');
+    const isVoiceOnly = isUser && msg.isVoiceOnly;
+    const isImageOnly = isUser && msg.isImageOnly;
+    const isMediaOnly = isVoiceOnly || isImageOnly;
+    const bubbleClass = isMediaOnly ? 'msg-bubble user transparent-bubble' : (isUser ? 'msg-bubble user' : 'msg-bubble ai');
+    const userActionsHtml = isVoiceOnly ? '' : `
+          <div class="msg-actions">
+            <button class="msg-action-btn" title="تعديل السؤال" onclick="Main.editMessage(this)"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+          </div>`;
     div.innerHTML = `
       <div class="msg-avatar ${isUser ? 'user' : 'ai'}">
         ${isUser ? '<i data-lucide="user" style="width:18px;height:18px"></i>' : '<img src="ai_avatar.png" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="AI">'}
@@ -1723,11 +1734,7 @@ const Main = {
             <button class="msg-action-btn" title="نسخ" onclick="Main.copyBubbleText(this)"><i data-lucide="copy" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="قراءة الصوت" onclick="Main.speak(this)"><i data-lucide="volume-2" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="إعادة التوليد" onclick="Main.regenerate()"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
-          </div>` : `
-          <div class="msg-actions">
-            <button class="msg-action-btn" title="تعديل السؤال" onclick="Main.editMessage(this)"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
-          </div>
-          `}
+          </div>` : userActionsHtml}
         </div>
       </div>
     `;
