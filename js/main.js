@@ -1114,7 +1114,6 @@ const Main = {
       }
     };
     await check();
-    setInterval(check, 10000);
   },
   async fetchVideoInfo(url) {
     try {
