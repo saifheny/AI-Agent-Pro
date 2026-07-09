@@ -100,13 +100,36 @@
   <script>
     const prog = document.getElementById('readProgress');
     const done = document.getElementById('doneBtn');
+    const backBtn = document.querySelector('.back-btn');
+    
+    function acceptTermsAndReturn() {
+      if (window.location.search.includes('accept=1')) {
+        localStorage.setItem('terms_accepted', 'true');
+        window.location.href = 'index.html';
+      } else {
+        history.back();
+      }
+    }
+
+    function rejectTermsAndReturn() {
+      if (window.location.search.includes('accept=1')) {
+        localStorage.removeItem('ai_logged_in');
+        localStorage.removeItem('ai_user');
+        window.location.href = 'login.html';
+      } else {
+        history.back();
+      }
+    }
+    
     window.addEventListener('scroll', () => {
       const el = document.documentElement;
-      const pct = el.scrollTop / (el.scrollHeight - el.clientHeight);
+      const pct = el.scrollTop / (el.scrollHeight - el.clientHeight || 1);
       prog.style.width = (pct * 100) + '%';
       done.style.display = pct > 0.88 ? 'block' : 'none';
     });
-    done.onclick = () => { history.back(); };
+    
+    done.onclick = acceptTermsAndReturn;
+    backBtn.onclick = rejectTermsAndReturn;
   </script>
 </body>
 </html>
