@@ -496,10 +496,12 @@ const Main = {
       } else {
         const ext = f.name.split('.').pop().toUpperCase();
         content = `
-          <div class="file-icon" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">
-            <i data-lucide="file-text" style="width:24px;height:24px;color:var(--text3)"></i>
-            <span style="font-weight:800;font-size:10px;margin-top:4px;">${ext}</span>
-            <span style="font-size:9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;text-align:center;">${this.escHtml(f.name)}</span>
+          <div class="file-icon" style="display:flex;align-items:center;gap:12px;width:100%;height:100%;padding:4px;">
+            <i data-lucide="file" style="width:20px;height:20px;color:var(--text2);flex-shrink:0;"></i>
+            <div style="display:flex;flex-direction:column;min-width:0;text-align:right;">
+              <span style="font-weight:700;font-size:12px;color:var(--text1);">${ext}</span>
+              <span style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.escHtml(f.name)}</span>
+            </div>
           </div>`;
       }
       return `
@@ -925,7 +927,7 @@ const Main = {
     }
     if (family === 'local') {
       let base = (document.getElementById('local-ai-url')?.value || localStorage.getItem('local_ai_base_url') || apiUrl).trim();
-      if (!/^https?:\/\
+      if (!/^https?:\/\//.test(base)) base = 'http://' + base;
       if (!base.endsWith('/v1/chat/completions') && !base.endsWith('/api/chat')) {
          base = base.replace(/\/$/, '') + '/v1/chat/completions';
       }
@@ -1439,11 +1441,25 @@ const Main = {
         aiContent = await LocalAIPlugin.callLocal({ provider: actualModelId.includes('Ollama') ? 'ollama' : 'lmstudio', actualId: actualModelId }, text);
       } else {
         const reqBody = this.buildRequestBody(family, actualModelId, apiMessages, temp, maxTok);
-        const response = await fetch(apiUrl, {
+        
+        let response;
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            const response = await fetch(apiUrl, {
           method: 'POST',
           headers: this.buildAuthHeaders(family, apiKey),
           body: JSON.stringify(reqBody)
         });
+            if (!response.ok) throw new Error(HTTP error! status: );
+            break;
+          } catch (e) {
+            retries--;
+            if (retries === 0) throw e;
+            await new Promise(r => setTimeout(r, 1000 * (4 - retries))); // Exponential-ish backoff
+          }
+        }
+
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
           throw new Error(errData.error?.message || `HTTP ${response.status}`);
@@ -2276,12 +2292,24 @@ const Main = {
     input.dispatchEvent(new Event('input'));
   },
   async regenerate() {
-    if (this.messages.length < 2) return;
-    let lastAiIndex = -1;
+    if (this.messages.length < 2 || this.isLoading) return;
+    let lastUserIndex = -1;
     for (let i = this.messages.length - 1; i >= 0; i--) {
-      if (this.messages[i].role === 'assistant') {
-        lastAiIndex = i;
+      if (this.messages[i].role === 'user') {
+        lastUserIndex = i;
         break;
+      }
+    }
+    if (lastUserIndex === -1) return;
+    
+    const lastUserMsg = this.messages[lastUserIndex];
+    this.messages.splice(lastUserIndex, this.messages.length - lastUserIndex);
+    this.renderMessages();
+    
+    const input = document.getElementById('chat-input');
+    if (input) input.value = lastUserMsg.content;
+    
+    setTimeout(() => this.sendMessage(), 100);
       }
     }
     if (lastAiIndex === -1) return;
