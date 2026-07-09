@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-agent-pro-v8';
+const CACHE_NAME = 'ai-agent-pro-v5';
 const ASSETS = [
   './',
   './index.html',

@@ -4106,11 +4106,9 @@ body.theme-light ::-webkit-scrollbar-thumb:hover {
   max-height: 100dvh;
   display: flex;
   flex-direction: column;
-  transform: translateY(100%);
 }
 .bottom-sheet.open {
-  transform: translateY(0);
-}
+  }
 .sheet-handle {
   display: none;
 }
@@ -6647,4 +6645,7 @@ button:hover, .icon-btn:hover, .nav-btn:hover, .btn:hover, .in-chat-model-select
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.icon-btn.active { color: var(--accent); background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); }
+  70% { box-shadow: none; }
+  100% { box-shadow: none; }
+}
+.icon-btn.active { color: var(--accent); background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); }

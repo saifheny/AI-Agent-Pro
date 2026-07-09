@@ -925,7 +925,7 @@ const Main = {
     }
     if (family === 'local') {
       let base = (document.getElementById('local-ai-url')?.value || localStorage.getItem('local_ai_base_url') || apiUrl).trim();
-      if (!/^https?:\/\//.test(base)) base = 'http://' + base;
+      if (!/^https?:\/\
       if (!base.endsWith('/v1/chat/completions') && !base.endsWith('/api/chat')) {
          base = base.replace(/\/$/, '') + '/v1/chat/completions';
       }
@@ -1114,6 +1114,7 @@ const Main = {
       }
     };
     await check();
+    setInterval(check, 10000);
   },
   async fetchVideoInfo(url) {
     try {
@@ -2557,8 +2558,17 @@ ${m.display || m.content}`).join('\
     }, 500);
   },
   setupNetworkMonitor() {
+    let bar = document.getElementById('network-bar');
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.id = 'network-bar';
+      bar.className = 'network-bar';
+      bar.innerHTML = '<i data-lucide="wifi-off" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-left:6px"></i> لا يوجد اتصال بالإنترنت';
+      document.body.prepend(bar);
+      lucide.createIcons();
+    }
     const update = () => {
-      document.body.classList.toggle('is-offline', !navigator.onLine);
+      bar.classList.toggle('show', !navigator.onLine);
     };
     window.addEventListener('online', update);
     window.addEventListener('offline', update);
