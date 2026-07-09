@@ -2175,6 +2175,10 @@ const Main = {
   },
   currentAudio: null,
   async speak(btnEl) {
+    if (localStorage.getItem('isGuest') === 'true') {
+      if (typeof UI !== 'undefined' && UI.toast) UI.toast('القراءة الصوتية غير متاحة للزوار. يرجى تسجيل الدخول.', 'error');
+      return;
+    }
     if (this.currentAudio && !this.currentAudio.paused) {
       this.currentAudio.pause();
       this.currentAudio = null;

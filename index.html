@@ -578,7 +578,7 @@
               </div>
 
               <div id="chat-input-container" style="padding: 12px 16px; flex:1; display:flex;">
-                <div id="active-mode-tag" class="mode-tag" style="display:none;" onclick="Main.openTool('general')"><span></span><i data-lucide="x" style="width:14px;height:14px"></i></div>
+                <div id="active-mode-tag" class="mode-tag" style="display:none;" onclick="UI.openTool('general')"><span></span><i data-lucide="x" style="width:14px;height:14px"></i></div>
             <textarea id="chat-input" rows="1" placeholder="اسأل AI Agent Pro..."
                   style="width:100%; min-height:44px; max-height:250px; resize:none; background:transparent; border:none; color:var(--text); outline:none; font-family:inherit; font-size:15px; padding:0; line-height:1.5;"></textarea>
               </div>
@@ -678,7 +678,7 @@
   <input type="file" id="image-capture-input" accept="image/*" capture="environment" hidden
     onchange="Main.handleFiles(this.files); this.value=''">
   <div class="modal-overlay" id="settings-modal" onclick="UI.closeModalOutside(event,'settings-modal')">
-    <div class="modal" style="width:600px; max-width:95%;">
+    <div class="modal fullscreen-api-ui">
       <div class="modal-header">
         <div class="modal-title">الإعدادات المتقدمة</div>
         <button onclick="UI.closeModal('settings-modal')" class="icon-btn"><i data-lucide="x"
@@ -1803,16 +1803,16 @@
       <div class="picker-section">
         <h3>الأدوات</h3>
         <div class="picker-grid">
-          <div class="picker-item" onclick="Main.openTool('general'); document.getElementById('fullscreen-picker').classList.remove('open')">
+          <div class="picker-item" onclick="UI.openTool('general'); document.getElementById('fullscreen-picker').classList.remove('open')">
             <i data-lucide="message-square"></i> المحادثة العادية
           </div>
-          <div class="picker-item" onclick="Main.openTool('web-search'); document.getElementById('fullscreen-picker').classList.remove('open')">
+          <div class="picker-item" onclick="UI.openTool('web-search'); document.getElementById('fullscreen-picker').classList.remove('open')">
             <i data-lucide="globe"></i> البحث في الإنترنت
           </div>
-          <div class="picker-item" onclick="Main.openTool('creative'); document.getElementById('fullscreen-picker').classList.remove('open')">
+          <div class="picker-item" onclick="UI.openTool('creative'); document.getElementById('fullscreen-picker').classList.remove('open')">
             <i data-lucide="palette"></i> الإبداع
           </div>
-          <div class="picker-item" onclick="Main.openTool('coding'); document.getElementById('fullscreen-picker').classList.remove('open')">
+          <div class="picker-item" onclick="UI.openTool('coding'); document.getElementById('fullscreen-picker').classList.remove('open')">
             <i data-lucide="code"></i> البرمجة
           </div>
         </div>
