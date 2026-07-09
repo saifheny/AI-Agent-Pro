@@ -481,35 +481,36 @@ const Main = {
     previewEl.style.display = 'flex';
     previewEl.innerHTML = this.uploadedFiles.map(f => {
       let content = '';
+      let extraStyle = '';
       if (f.isVoice) {
         const mins = Math.floor(f.voiceDuration/60).toString().padStart(2, '0');
         const secs = (f.voiceDuration%60).toString().padStart(2, '0');
+        const bars = Array.from({ length: 30 }, () => `<div class="voice-wave-bar" style="height:${4 + Math.random() * 16}px; background:var(--accent)"></div>`).join('');
         content = `
-          <div class="voice-preview-bubble" style="display:flex;align-items:center;gap:8px;background:var(--bg2);padding:6px 12px;border-radius:20px;width:100%;">
-            <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;">
-              <i data-lucide="mic" style="width:14px;height:14px"></i>
-            </div>
-            <span style="font-size:11px;color:var(--text2);flex:1;font-weight:600;">صوت (${mins}:${secs})</span>
+          <div class="voice-message-premium" style="margin:0; background:transparent;" onclick="Main.playAudioMsg(this, '${f.content}')">
+            <button class="voice-play-pause" style="pointer-events:none;"><i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i></button>
+            <div class="voice-wave-visualizer">${bars}</div>
+            <span style="font-size:10px;margin-right:8px;opacity:0.7;">${mins}:${secs}</span>
           </div>`;
+        extraStyle = 'background: transparent; border: none; padding: 0; min-width: 250px;';
       } else if (f.type.startsWith('image/')) {
         content = `<img src="${f.content}" alt="Attachment" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`;
+        extraStyle = 'background: transparent; border: none; padding: 0;';
       } else {
         const ext = f.name.split('.').pop().toUpperCase();
         content = `
           <div class="file-icon" style="display:flex;align-items:center;gap:12px;width:100%;height:100%;padding:4px;">
             <i data-lucide="file" style="width:20px;height:20px;color:var(--text2);flex-shrink:0;"></i>
-            <div style="display:flex;flex-direction:column;min-width:0;text-align:right;">
-              <span style="font-weight:700;font-size:12px;color:var(--text1);">${ext}</span>
-              <span style="font-size:10px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${this.escHtml(f.name)}</span>
+            <div style="flex:1;overflow:hidden;">
+              <div style="font-size:12px;font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;color:var(--text);">${f.name}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">${(f.size/1024).toFixed(1)} KB</div>
             </div>
           </div>`;
       }
       return `
-        <div class="attachment-card">
-          <button class="remove-attachment" onclick="Main.removeFile('${f.id}')">
-            <i data-lucide="x" style="width:14px;height:14px"></i>
-          </button>
+        <div class="attachment-item" style="${extraStyle}">
           ${content}
+          <button class="remove-attachment" style="background:rgba(0,0,0,0.5);color:#fff;" onclick="Main.removeFile('${f.id}')"><i data-lucide="x" style="width:14px;height:14px"></i></button>
         </div>
       `;
     }).join('');
@@ -1974,6 +1975,7 @@ const Main = {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.micStream = stream;
       this.mediaRecorder = new MediaRecorder(stream);
       this.audioChunks = [];
       this.voiceTicks = 0;
@@ -2063,12 +2065,15 @@ const Main = {
   cancelVoice() {
     if (!this.isListening) return;
     this.isListening = false;
+    
+    // Forcefully stop hardware microphone tracks immediately
+    if (this.micStream) {
+      this.micStream.getTracks().forEach(t => t.stop());
+      this.micStream = null;
+    }
+    
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.onstop = () => {
-        if (this.mediaRecorder.stream) {
-          this.mediaRecorder.stream.getTracks().forEach(t => t.stop());
-        }
-      };
+      this.mediaRecorder.onstop = null; // Prevent saving the file
       this.mediaRecorder.stop();
     }
     if (this.recognition) {
@@ -2092,6 +2097,11 @@ const Main = {
     if (voiceUi) voiceUi.style.display = 'none';
   },
   _addVoiceAsAttachment(audioBlob, audioUrl) {
+    const currentVoiceNotes = this.uploadedFiles.filter(f => f.isVoice).length;
+    if (currentVoiceNotes >= 2) {
+      UI.toast('لا يمكن إرفاق أكثر من رسالتين صوتيتين في المرة الواحدة', 'warning');
+      return;
+    }
     const id = 'voice_' + Date.now() + '_' + Math.random().toString(36).substr(2,4);
     const totalSeconds = Math.floor(this.voiceTicks / 10);
     const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
@@ -2138,7 +2148,7 @@ const Main = {
   },
   playAudioMsg(btn, url) {
     if (!url) return;
-    const parent = btn.closest('.voice-message-premium') || btn.closest('.voice-preview-bar');
+    const parent = btn.closest('.voice-message-premium') || btn.closest('.voice-preview-bar') || btn.closest('.attachment-item');
     if (this.currentAudio && !this.currentAudio.paused) {
       this.currentAudio.pause();
       if (this.currentAudio.src.includes(url) || url.includes(this.currentAudio.src)) {
@@ -2148,10 +2158,12 @@ const Main = {
         lucide.createIcons();
         return;
       }
-      document.querySelectorAll('.voice-message-premium, .voice-preview-bar').forEach(b => {
+      document.querySelectorAll('.voice-message-premium, .voice-preview-bar, .attachment-item').forEach(b => {
         b.classList.remove('playing');
         const pBtn = b.querySelector('.voice-play-pause, .voice-play-btn');
         if (pBtn) pBtn.innerHTML = '<i data-lucide="play" style="width:18px;height:18px"></i>';
+        const bars = b.querySelectorAll('.voice-wave-bar');
+        bars.forEach(bar => bar.style.opacity = '0.3');
       });
     }
     this.currentAudio = new Audio(url);
@@ -2159,257 +2171,34 @@ const Main = {
     btn.innerHTML = '<i data-lucide="pause" style="width:18px;height:18px"></i>';
     if (parent) parent.classList.add('playing');
     lucide.createIcons();
+    
+    // Animate waveforms
+    const updateWaveform = () => {
+      if (!this.currentAudio || this.currentAudio.paused) return;
+      if (parent) {
+        const progress = this.currentAudio.currentTime / (this.currentAudio.duration || 1);
+        const bars = parent.querySelectorAll('.voice-wave-bar');
+        const activeCount = Math.floor(progress * bars.length);
+        bars.forEach((bar, index) => {
+          if (index <= activeCount) {
+            bar.style.opacity = '1';
+          } else {
+            bar.style.opacity = '0.3';
+          }
+        });
+      }
+      requestAnimationFrame(updateWaveform);
+    };
+    requestAnimationFrame(updateWaveform);
+
     this.currentAudio.onended = () => {
       btn.innerHTML = '<i data-lucide="play" style="width:18px;height:18px"></i>';
-      if (parent) parent.classList.remove('playing');
+      if (parent) {
+        parent.classList.remove('playing');
+        parent.querySelectorAll('.voice-wave-bar').forEach(bar => bar.style.opacity = '0.3');
+      }
       lucide.createIcons();
     };
-  },
-  clearVoicePreview() {
-    this.pendingVoiceBlob = null;
-    this.pendingVoiceUrl = null;
-    this.pendingVoiceTranscript = '';
-    const previewArea = document.getElementById('attachments-preview');
-    previewArea.style.display = 'none';
-    previewArea.innerHTML = '';
-  },
-  currentAudio: null,
-  async speak(btnEl) {
-    if (localStorage.getItem('isGuest') === 'true') {
-      if (typeof UI !== 'undefined' && UI.toast) UI.toast('القراءة الصوتية غير متاحة للزوار. يرجى تسجيل الدخول.', 'error');
-      return;
-    }
-    if (this.currentAudio && !this.currentAudio.paused) {
-      this.currentAudio.pause();
-      this.currentAudio = null;
-      btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-      lucide.createIcons();
-      return;
-    }
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-      lucide.createIcons();
-      return;
-    }
-    const text = btnEl.closest('.msg-body').querySelector('.msg-bubble').innerText;
-    const elKey = localStorage.getItem('elevenlabs_api_key') || document.getElementById('elevenlabs-key-input')?.value;
-    document.querySelectorAll('.msg-action-btn[title="قراءة الصوت"]').forEach(b => {
-      b.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-    });
-    btnEl.innerHTML = '<i data-lucide="square" style="width:14px;height:14px;color:var(--red)"></i>';
-    lucide.createIcons();
-    if (elKey) {
-      UI.toast('جاري تحضير الصوت السينمائي...', 'info');
-      try {
-        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/pFZP5JQG7iQjIQuC4Bku`, {
-          method: 'POST',
-          headers: { 'Accept': 'audio/mpeg', 'xi-api-key': elKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.5, similarity_boost: 0.5 } })
-        });
-        if (!res.ok) throw new Error('فشل ElevenLabs');
-        const blob = await res.blob();
-        this.currentAudio = new Audio(URL.createObjectURL(blob));
-        this.currentAudio.onended = () => {
-          btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-          lucide.createIcons();
-        };
-        this.currentAudio.play();
-      } catch (err) {
-        UI.toast('خطأ في ElevenLabs، سيتم استخدام النطق العادي', 'error');
-        this.fallbackSpeak(text, btnEl);
-      }
-    } else {
-      this.fallbackSpeak(text, btnEl);
-    }
-  },
-  fallbackSpeak(text, btnEl) {
-    if (this.currentAudio && !this.currentAudio.paused) {
-      this.currentAudio.pause();
-    }
-    const cleanText = text.replace(/[*_#`~[\]]/g, '').trim();
-    const chunks = cleanText.match(/.{1,150}(?:\s|[.،؟!:]|$)/g) || [cleanText];
-    let index = 0;
-    const playNext = () => {
-      if (index >= chunks.length) {
-        if (btnEl) btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-        lucide.createIcons();
-        return;
-      }
-      const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(chunks[index].trim()) + '&tl=ar&client=tw-ob';
-      this.currentAudio = new Audio(url);
-      this.currentAudio.onended = () => {
-        index++;
-        playNext();
-      };
-      this.currentAudio.onerror = () => {
-        const utterance = new SpeechSynthesisUtterance(chunks.slice(index).join(' '));
-        utterance.lang = 'ar-SA';
-        utterance.onend = () => {
-          if (btnEl) btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-          lucide.createIcons();
-        };
-        window.speechSynthesis.speak(utterance);
-      };
-      this.currentAudio.play().catch(e => {
-         console.error('TTS error:', e);
-         const utterance = new SpeechSynthesisUtterance(chunks.slice(index).join(' '));
-         utterance.lang = 'ar-SA';
-         window.speechSynthesis.speak(utterance);
-      });
-    };
-    UI.toast('جاري القراءة بصوت احترافي...', 'info');
-    playNext();
-  },
-  setMode(mode) {
-    this.currentMode = mode;
-    document.querySelectorAll('.input-tag').forEach(el => el.classList.remove('active'));
-    document.getElementById('tag-' + mode)?.classList.add('active');
-    const sheet = document.getElementById('mobile-tools-sheet');
-    if (sheet) {
-      sheet.querySelectorAll('.tool-item').forEach(el => {
-        const onclick = el.getAttribute('onclick') || '';
-        el.classList.toggle('active', onclick.includes(`setMode('${mode}')`));
-      });
-    }
-    document.querySelectorAll('.tool-card').forEach(el => el.classList.remove('active'));
-    document.getElementById('tool-' + mode)?.classList.add('active');
-    UI.toast(`تم تفعيل وضع: ${mode}`, 'info');
-    this.updateActiveModesUI();
-  },
-  updateActiveModesUI() {
-    const container = document.getElementById('active-modes-container');
-    if (!container) return;
-    let html = '';
-    
-    const webToggle = document.getElementById('web-search-toggle');
-    if (webToggle && webToggle.checked) {
-      html += `<div onclick="Main.toggleWebSearch()" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#10b981; padding:4px 10px; border-radius:20px; font-size:11px; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all 0.2s;"><i data-lucide="globe" style="width:12px;height:12px"></i> بحث الويب <i data-lucide="x" style="width:12px;height:12px;opacity:0.6"></i></div>`;
-    }
-    
-    if (this.currentMode !== 'general') {
-      const modeNames = {
-        'coding': { name: 'محرر أكواد', icon: 'code-2', color: '#3b82f6' },
-        'analyze': { name: 'تحليل بيانات', icon: 'bar-chart-2', color: '#8b5cf6' },
-        'translate': { name: 'مترجم', icon: 'languages', color: '#ec4899' },
-        'creative': { name: 'كتابة إبداعية', icon: 'pen-tool', color: '#f59e0b' }
-      };
-      const m = modeNames[this.currentMode] || { name: this.currentMode, icon: 'zap', color: 'var(--accent)' };
-      html += `<div onclick="Main.setMode('general')" style="background:${m.color}20; border:1px solid ${m.color}40; color:${m.color}; padding:4px 10px; border-radius:20px; font-size:11px; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all 0.2s;"><i data-lucide="${m.icon}" style="width:12px;height:12px"></i> ${m.name} <i data-lucide="x" style="width:12px;height:12px;opacity:0.6"></i></div>`;
-    }
-    
-    if (html) {
-      container.style.display = 'flex';
-      container.innerHTML = html;
-      lucide.createIcons();
-    } else {
-      container.style.display = 'none';
-      container.innerHTML = '';
-    }
-  },
-  quickPrompt(text) {
-    const input = document.getElementById('chat-input');
-    input.value = text;
-    input.focus();
-    
-    input.dispatchEvent(new Event('input'));
-  },
-  async regenerate() {
-    if (this.messages.length < 2 || this.isLoading) return;
-    let lastAiIndex = -1;
-    for (let i = this.messages.length - 1; i >= 0; i--) {
-      if (this.messages[i].role === 'assistant') {
-        lastAiIndex = i;
-        break;
-      }
-    }
-    if (lastAiIndex === -1) return;
-    this.messages.splice(lastAiIndex, 1);
-    this.renderMessages();
-    this.isLoading = true;
-    document.getElementById('send-btn').disabled = true;
-    const typingUI = this.showTyping();
-    try {
-      const customSys = document.getElementById('custom-system-prompt').value;
-      let baseSys = customSys || this.systemPrompts[this.currentMode] || this.systemPrompts['general'];
-      const tone = document.getElementById('ai-tone')?.value || 'default';
-      if (tone === 'formal') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة رسمية، احترافية، وموضوعية تماماً.';
-      else if (tone === 'casual') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة ودية وبسيطة.';
-      else if (tone === 'humorous') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة فكاهية لطيفة.';
-      else if (tone === 'academic') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة أكاديمية دقيقة.';
-      const apiMessages = [{ role: 'system', content: baseSys }, ...this.messages.map(m => ({
-        role: m.role,
-        content: m.payloadContent || m.content
-      }))];
-      const temp = parseFloat(document.getElementById('temp-slider')?.value) || 0.7;
-      const maxTok = parseInt(document.getElementById('max-tokens')?.value) || 4096;
-      const { apiUrl, apiKey, actualModelId, family } = this.getApiConfig();
-      const needsCloudKey = family !== 'local' && family !== 'pollinations';
-      if (needsCloudKey && (!apiKey || apiKey.trim() === '')) {
-        typingUI.remove();
-        const noKeyMsg = { role: 'assistant', content: `[UI_WIDGET:API_KEY_REQ:${family}]`, time: this.now() };
-        this.messages.push(noKeyMsg);
-        this.appendMessage(noKeyMsg, true);
-        this.isLoading = false;
-        document.getElementById('send-btn').disabled = false;
-        return;
-      }
-      let aiContent = '';
-      if (family === 'pollinations') {
-        const fullPrompt = apiMessages.map(m => m.content).join('\n\n');
-        const encodedPrompt = encodeURIComponent(fullPrompt);
-        const url = `${apiUrl}/${encodedPrompt}?model=${actualModelId}&json=false&search=true`;
-        const response = await fetch(url, { method: 'GET' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        aiContent = await response.text();
-      } else {
-        const chatReqBody = this.buildRequestBody(family, actualModelId, apiMessages, temp, maxTok);
-        const chatRes = await fetch(apiUrl, {
-          method: 'POST',
-          headers: this.buildAuthHeaders(family, apiKey),
-          body: JSON.stringify(chatReqBody)
-        });
-        if (!chatRes.ok) {
-          const errData = await chatRes.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `HTTP Error: ${chatRes.status}`);
-        }
-        const chatData = await chatRes.json();
-        aiContent = this.parseAIResponse(family, chatData);
-        if (chatData.usage && typeof chatData.usage.total_tokens === 'number') {
-          this.stats.tokens += Math.round(chatData.usage.total_tokens / 1000);
-          this.updateStatsUI();
-        }
-      }
-      const aiMsg = { role: 'assistant', content: aiContent, time: this.now() };
-      this.messages.push(aiMsg);
-      typingUI.remove();
-      this.appendMessage(aiMsg, true);
-      this.saveData();
-    } catch (err) {
-      typingUI.remove();
-      UI.toast('حدث خطأ أثناء إعادة التوليد', 'error');
-    }
-    this.isLoading = false;
-    document.getElementById('send-btn').disabled = false;
-  },
-  copyBubbleText(btnEl) {
-    const text = btnEl.closest('.msg-body').querySelector('.msg-bubble').innerText;
-    navigator.clipboard.writeText(text);
-    UI.toast('تم النسخ', 'success');
-  },
-  copyCode(btnEl) {
-    const text = btnEl.closest('.code-container-premium').querySelector('code').innerText;
-    navigator.clipboard.writeText(text);
-    btnEl.innerHTML = '<i data-lucide="check" style="width:12px;height:12px"></i> تم';
-    lucide.createIcons();
-    setTimeout(() => {
-      btnEl.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px"></i> نسخ';
-      lucide.createIcons();
-    }, 2000);
   },
   sendCodeToEditor(btnEl, lang) {
     const code = btnEl.closest('.code-container-premium').querySelector('code').innerText;

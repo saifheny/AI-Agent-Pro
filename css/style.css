@@ -6728,3 +6728,26 @@ button:active { transform: scale(0.95) !important; }
   border-top: 1px solid rgba(255,255,255,0.05) !important;
   background: #000 !important;
 }
+.msg-bubble.transparent-bubble {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.msg-bubble.transparent-bubble::after,
+.msg-bubble.transparent-bubble::before {
+  display: none !important;
+}
+.voice-wave-bar {
+  opacity: 0.3;
+  transition: opacity 0.1s ease, height 0.1s ease;
+}
+.voice-message-premium .voice-play-pause, .attachment-item .voice-play-pause {
+  pointer-events: auto !important;
+}
+.msg-bubble.transparent-bubble .msg-attachments-wrap {
+  margin-bottom: 0 !important;
+}
+.msg-bubble.transparent-bubble .msg-content-wrapper {
+  display: none !important;
+}
