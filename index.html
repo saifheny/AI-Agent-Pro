@@ -530,7 +530,7 @@
             <div class="welcome" id="welcome-screen">
               <div class="welcome-icon"
                 style="background: transparent; border: none; padding: 0; display:flex; justify-content:center; margin-bottom: 24px;">
-                <img src="ai_avatar.png" alt="AI Agent Avatar" style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); object-fit: cover;">
+                <img src="ai_avatar.png" alt="AI Agent Avatar" style="width: 70px; height: 70px; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); object-fit: cover;">
               </div>
               <h1 class="typewriter-text" id="welcome-title">مرحباً بك في AI Agent Pro ✨</h1>
               <p style="animation: fadeIn 1s ease 2.8s both;">المنصة المتكاملة للذكاء الاصطناعي. اسأل، برمج، حلل
@@ -560,7 +560,8 @@
               </div>
 
               <div id="chat-input-container" style="padding: 12px 16px; flex:1; display:flex;">
-                <textarea id="chat-input" rows="1" placeholder="اسأل AI Agent Pro..."
+                <div id="active-mode-tag" class="mode-tag" style="display:none;" onclick="Main.openTool('general')"><span></span><i data-lucide="x" style="width:14px;height:14px"></i></div>
+            <textarea id="chat-input" rows="1" placeholder="اسأل AI Agent Pro..."
                   style="width:100%; min-height:44px; max-height:250px; resize:none; background:transparent; border:none; color:var(--text); outline:none; font-family:inherit; font-size:15px; padding:0; line-height:1.5;"></textarea>
               </div>
 
@@ -1770,6 +1771,37 @@
       navigator.serviceWorker.register('sw.js').catch(() => { });
     }
   </script>
+
+  <div id="fullscreen-picker" class="fullscreen-picker">
+    <div class="picker-header">
+      <h2>اختيار أداة أو نموذج</h2>
+      <button onclick="document.getElementById('fullscreen-picker').classList.remove('open')" class="icon-btn"><i data-lucide="x"></i></button>
+    </div>
+    <div class="picker-search">
+      <i data-lucide="search"></i>
+      <input type="text" placeholder="ابحث عن أداة أو نموذج..." oninput="UI.filterPicker(this.value)">
+    </div>
+    <div class="picker-body">
+      <div class="picker-section">
+        <h3>الأدوات</h3>
+        <div class="picker-grid">
+          <div class="picker-item" onclick="Main.openTool('general'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="message-square"></i> المحادثة العادية
+          </div>
+          <div class="picker-item" onclick="Main.openTool('web-search'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="globe"></i> البحث في الإنترنت
+          </div>
+          <div class="picker-item" onclick="Main.openTool('creative'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="palette"></i> الإبداع
+          </div>
+          <div class="picker-item" onclick="Main.openTool('coding'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="code"></i> البرمجة
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 
 </html>
