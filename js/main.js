@@ -2558,17 +2558,8 @@ ${m.display || m.content}`).join('\
     }, 500);
   },
   setupNetworkMonitor() {
-    let bar = document.getElementById('network-bar');
-    if (!bar) {
-      bar = document.createElement('div');
-      bar.id = 'network-bar';
-      bar.className = 'network-bar';
-      bar.innerHTML = '<i data-lucide="wifi-off" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-left:6px"></i> لا يوجد اتصال بالإنترنت';
-      document.body.prepend(bar);
-      lucide.createIcons();
-    }
     const update = () => {
-      bar.classList.toggle('show', !navigator.onLine);
+      document.body.classList.toggle('is-offline', !navigator.onLine);
     };
     window.addEventListener('online', update);
     window.addEventListener('offline', update);
