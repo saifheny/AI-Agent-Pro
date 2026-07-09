@@ -659,6 +659,21 @@ const Main = {
       if (d.id !== 'chat-dropdown-' + id) d.classList.remove('show');
     });
     dropdown.classList.toggle('show');
+    if (dropdown.classList.contains('show')) {
+      const btn = document.getElementById('menu-btn-' + id);
+      if(btn) {
+          const rect = btn.getBoundingClientRect();
+          dropdown.style.bottom = '';
+          dropdown.style.top = '';
+          if (rect.top < window.innerHeight * 0.3) {
+             dropdown.style.top = '100%';
+             dropdown.style.bottom = 'auto';
+          } else {
+             dropdown.style.bottom = '100%';
+             dropdown.style.top = 'auto';
+          }
+      }
+    }
     const close = (event) => {
       if (!dropdown.contains(event.target)) {
         dropdown.classList.remove('show');
@@ -1446,23 +1461,27 @@ const Main = {
         let retries = 3;
         while (retries > 0) {
           try {
-            const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: this.buildAuthHeaders(family, apiKey),
-          body: JSON.stringify(reqBody)
-        });
-            if (!response.ok) throw new Error(HTTP error! status: );
+            response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: this.buildAuthHeaders(family, apiKey),
+              body: JSON.stringify(reqBody)
+            });
+            if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
             break;
           } catch (e) {
             retries--;
             if (retries === 0) throw e;
-            await new Promise(r => setTimeout(r, 1000 * (4 - retries))); // Exponential-ish backoff
+            await new Promise(r => setTimeout(r, 1000 * (4 - retries)));
           }
         }
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `HTTP ${response.status}`);
+        if (!response || !response.ok) {
+          let errMessage = `HTTP error!`;
+          if (response) {
+             const errData = await response.json().catch(() => ({}));
+             errMessage = errData.error?.message || `HTTP ${response.status}`;
+          }
+          throw new Error(errMessage);
         }
         const data = await response.json();
         aiContent = this.parseAIResponse(family, data);
@@ -2293,23 +2312,11 @@ const Main = {
   },
   async regenerate() {
     if (this.messages.length < 2 || this.isLoading) return;
-    let lastUserIndex = -1;
+    let lastAiIndex = -1;
     for (let i = this.messages.length - 1; i >= 0; i--) {
-      if (this.messages[i].role === 'user') {
-        lastUserIndex = i;
+      if (this.messages[i].role === 'assistant') {
+        lastAiIndex = i;
         break;
-      }
-    }
-    if (lastUserIndex === -1) return;
-    
-    const lastUserMsg = this.messages[lastUserIndex];
-    this.messages.splice(lastUserIndex, this.messages.length - lastUserIndex);
-    this.renderMessages();
-    
-    const input = document.getElementById('chat-input');
-    if (input) input.value = lastUserMsg.content;
-    
-    setTimeout(() => this.sendMessage(), 100);
       }
     }
     if (lastAiIndex === -1) return;

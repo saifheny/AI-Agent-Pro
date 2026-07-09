@@ -2,111 +2,120 @@
 <html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Privacy Policy — AI Agent Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - AI Agent Pro</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-    html{scroll-behavior:smooth}
-    body{font-family:'Inter', -apple-system, system-ui, sans-serif;background:#000;color:#E5E5E5;line-height:1.9;min-height:100vh}
-    .back-btn{position:fixed;top:24px;left:24px;z-index:100;width:48px;height:48px;border-radius:50%;border:1px solid rgba(255,255,255,0.1);background:rgba(15,15,15,0.8);backdrop-filter:blur(20px);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;text-decoration:none}
-    .back-btn:hover{background:rgba(255,255,255,0.05);}
-    .back-btn svg{width:20px;height:20px;color:#fff}
-    .hero{padding:100px 24px 60px;text-align:center;background:#000;border-bottom:1px solid rgba(255,255,255,0.04);position:relative;}
-    .hero-icon{width:80px;height:80px;margin:0 auto 20px;border-radius:24px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;}
-    .hero-icon svg{width:36px;height:36px;color:#fff}
-    .hero h1{font-size:36px;font-weight:900;margin-bottom:8px;color:#fff;}
-    .hero p{color:#737373;font-size:14px}
-    .hero .badge{display:inline-flex;align-items:center;gap:6px;margin-top:12px;padding:6px 14px;border-radius:20px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);font-size:12px;color:#fff}
-    .container{max-width:800px;margin:0 auto;padding:40px 24px 80px}
-    .section{margin-bottom:40px;padding:28px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);border-radius:20px;transition:border-color .2s}
-    .section:hover{border-color:rgba(255,255,255,0.1)}
-    .section-header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
-    .section-icon{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(255,255,255,0.05);color:#fff}
-    .section-icon svg{width:22px;height:22px}
-    .section h2{font-size:20px;font-weight:800;color:#fff}
-    .section ul{list-style:none;padding:0}
-    .section ul li{padding:8px 0;padding-left:24px;position:relative;color:#d4d4d4;font-size:14px}
-    .section ul li::before{content:'';position:absolute;left:0;top:16px;width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,0.5)}
-    .section p{color:#d4d4d4;font-size:14px;margin-bottom:8px}
-    .highlight{background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:16px 20px;margin:12px 0;font-size:13px;color:#fff;display:flex;align-items:flex-start;gap:12px}
-    .highlight svg{width:20px;height:20px;flex-shrink:0;margin-top:2px;color:#fff}
-    .footer{text-align:center;padding:40px 24px;color:#525252;font-size:12px;border-top:1px solid rgba(255,255,255,0.04)}
-    @media(max-width:768px){
-      .hero{padding:80px 20px 40px}
-      .hero h1{font-size:26px}
-      .container{padding:24px 16px 60px}
-      .section{padding:20px}
-      .back-btn{top:16px;left:16px;width:42px;height:42px}
+    :root {
+      --bg: #000000;
+      --surface: #0a0a0a;
+      --text: #ffffff;
+      --text-muted: #888888;
+      --accent: #3b82f6;
     }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    .header {
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    .back-btn {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: inherit;
+      font-size: 16px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      transition: background 0.2s;
+    }
+    .back-btn:hover { background: rgba(255, 255, 255, 0.1); }
+    .content-wrapper {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 24px 100px;
+    }
+    h1 { font-size: 32px; font-weight: 700; margin-bottom: 32px; }
+    h2 { font-size: 24px; font-weight: 600; margin: 32px 0 16px; color: #fff; }
+    p { margin-bottom: 16px; color: var(--text-muted); font-size: 16px; }
+    ul { margin-bottom: 16px; padding-left: 24px; color: var(--text-muted); }
+    li { margin-bottom: 8px; }
+    .footer-action {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 24px;
+      background: var(--bg);
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      display: flex;
+      justify-content: center;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
-  <div id="readProgress" style="position:fixed;top:0;left:0;height:2px;background:#fff;width:0%;z-index:9999;transition:width 0.1s;"></div>
-  <button onclick="history.back()" class="back-btn">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-  </button>
-  <button id="doneBtn" style="display:none;position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#fff;color:#000;font-family:inherit;font-weight:600;font-size:14px;padding:14px 32px;border:none;border-radius:14px;cursor:pointer;z-index:200;white-space:nowrap;">Got it — Return</button>
-  <div class="hero">
-    <div class="hero-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div>
+  <div class="header">
+    <button class="back-btn" onclick="history.back()">
+      <i data-lucide="arrow-left"></i> Back
+    </button>
+  </div>
+  <div class="content-wrapper">
     <h1>Privacy Policy</h1>
-    <p>Last Updated: May 2026</p>
-    <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg> Strict Policy — SA Foundation</div>
+    <p>Last updated: July 2026</p>
+    
+    <h2>1. Introduction</h2>
+    <p>Welcome to AI Agent Pro. We respect your privacy and are committed to protecting your personal data. This privacy policy explains how we handle any information when you use our platform.</p>
+    
+    <h2>2. Data Collection</h2>
+    <p>We believe in absolute privacy. AI Agent Pro operates predominantly on your local machine or through direct API connections to third-party providers (like OpenAI, Google, etc.) configured by you. We do not collect, store, or transmit your conversation history, uploaded files, or generated content to any central servers controlled by us.</p>
+    
+    <h2>3. API Keys and Credentials</h2>
+    <p>Any API keys you provide are stored exclusively in your browser's local storage. They are never sent to our servers. When making requests, your browser communicates directly with the respective AI provider's API endpoints.</p>
+    
+    <h2>4. Third-Party Services</h2>
+    <p>By using specific models, you may be subject to the privacy policies of the respective providers:</p>
+    <ul>
+      <li>OpenAI Privacy Policy</li>
+      <li>Google Privacy Policy</li>
+      <li>Anthropic Privacy Policy</li>
+    </ul>
+    
+    <h2>5. Local Processing</h2>
+    <p>Features such as local video downloading or processing are executed locally on your machine. We do not track or monitor the files you process.</p>
   </div>
-  <div class="container">
-    <div class="section">
-      <div class="section-header">
-        <div class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg></div>
-        <h2>1. Our Commitment to Privacy</h2>
-      </div>
-      <p>At SA Foundation, we are strictly committed to protecting our users' privacy. This policy explains how we collect, use, and protect your personal data when using the AI Agent Pro platform.</p>
-      <div class="highlight">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/></svg>
-        <span>We never sell your data. Your privacy is a top priority and a fundamental right we commit to protecting.</span>
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-header">
-        <div class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-        <h2>2. Data We Collect</h2>
-      </div>
-      <ul>
-        <li><strong>Account Data:</strong> Name, Email, Profile Picture (via Google Sign-In)</li>
-        <li><strong>Usage Data:</strong> Number of messages, models used, general statistics</li>
-        <li><strong>Chats:</strong> Stored locally on your device only (localStorage) and not sent to our servers</li>
-        <li><strong>API Keys:</strong> Saved locally on your device and never accessed by us</li>
-      </ul>
-      <div class="highlight">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        <span>Your API keys never leave your device. We use a Local-First architecture for maximum protection.</span>
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-header">
-        <div class="section-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
-        <h2>3. How We Use Your Data</h2>
-      </div>
-      <ul>
-        <li>Improve user experience and platform performance</li>
-        <li>Manage your account and provide technical support</li>
-        <li>Anonymous analytics for platform development</li>
-        <li>We never use your data for advertising purposes</li>
-        <li>We do not share your data with any third party</li>
-      </ul>
-    </div>
+  
+  <div class="footer-action">
+    <button class="btn-primary" onclick="history.back()">I Understand</button>
   </div>
-  <div class="footer">© 2026 AI Agent Pro — SA Foundation. All rights reserved. Strict & binding privacy policy.</div>
-  <script>
-    const prog = document.getElementById('readProgress');
-    const done = document.getElementById('doneBtn');
-    window.addEventListener('scroll', () => {
-      const el = document.documentElement;
-      const pct = el.scrollTop / (el.scrollHeight - el.clientHeight);
-      prog.style.width = (pct * 100) + '%';
-      done.style.display = pct > 0.88 ? 'block' : 'none';
-    });
-    done.onclick = () => { history.back(); };
-  </script>
+  
+  <script>lucide.createIcons();</script>
 </body>
 </html>

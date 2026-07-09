@@ -110,12 +110,21 @@ const UI = {
     if (savedAccent) this.setAccentColor(savedAccent);
   },
   openTool(toolId) {
+    if (localStorage.getItem('isGuest') === 'true' && (toolId === 'web-search' || toolId === 'creative' || toolId === 'coding')) {
+       this.toast('هذه الميزة غير متاحة للزوار. يرجى تسجيل الدخول.', 'error');
+       return;
+    }
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-' + toolId)?.classList.add('active');
+    
+    // Also update fullscreen picker items if it exists
+    document.querySelectorAll('.picker-item').forEach(b => b.classList.remove('active'));
+    document.getElementById('picker-' + toolId)?.classList.add('active');
+
     if (toolId === 'coding') {
       Editor.toggleSplitScreen();
     } else {
-      Main.setMode(toolId);
+      if(typeof Main !== 'undefined') Main.setMode(toolId);
       if (window.innerWidth <= 768 && this.sidebarOpen) this.toggleSidebar();
     }
   },
