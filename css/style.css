@@ -4104,13 +4104,14 @@ body.theme-light ::-webkit-scrollbar-thumb:hover {
   transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
   height: 100dvh;
   max-height: 100dvh;
-  display: flex;
+  display: none;
   flex-direction: column;
-  
+  transform: translateY(100%);
   pointer-events: none;
 }
 .bottom-sheet.open {
-  
+  display: flex;
+  transform: translateY(0);
   pointer-events: auto;
 }
 .sheet-handle {
