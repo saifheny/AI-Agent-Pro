@@ -8448,23 +8448,6 @@ body.user-typing::after, body.assistant-busy::after { opacity: 0; }
   .nav-logo img { width:42px !important; height:42px !important; box-shadow:0 5px 16px rgba(0,0,0,.34) !important; }
 }
 
-/* Voice drafts are editable before they are sent. */
-.voice-draft-action {
-  width:26px;
-  height:26px;
-  display:inline-grid;
-  place-items:center;
-  flex:0 0 auto;
-  padding:0;
-  color:rgba(255,255,255,.78);
-  background:rgba(255,255,255,.07);
-  border:1px solid rgba(255,255,255,.10);
-  border-radius:8px;
-}
-.voice-draft-action:hover { background:rgba(255,255,255,.14); color:#fff; }
-.voice-draft-action.danger { color:#fda4af; }
-.voice-draft-action.danger:hover { background:rgba(239,68,68,.16); color:#fecdd3; }
-
 /* Model chooser always has a clear way back to the conversation. */
 #model-picker-modal .model-picker-back {
   position:absolute;

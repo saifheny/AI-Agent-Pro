@@ -654,17 +654,6 @@ const Main = {
       this.updateStorageUI();
     }
   },
-  restartVoiceDraft(id) {
-    if (this.isListening || this.voiceFinalizing) {
-      UI.toast('انتظر حتى يكتمل التسجيل الحالي أولًا.', 'info');
-      return;
-    }
-    const draft = this.uploadedFiles.find(file => file.id === id && file.isVoice);
-    if (!draft) return;
-    this.removeFile(id);
-    UI.toast('ابدأ التسجيل من جديد، ويمكنك إيقافه ومتابعته قبل الحفظ.', 'info');
-    this.toggleVoice();
-  },
   renderAttachments() {
     const previewEl = document.getElementById('attachments-preview');
     if (!previewEl) return;
@@ -686,8 +675,6 @@ const Main = {
             <button class="voice-play-pause" onclick="Main.playAudioMsg(this, '${f.content}')"><i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i></button>
             <div class="voice-wave-visualizer" onclick="Main.seekAudio(event, this)">${bars}</div>
             <span class="voice-time" data-duration="${f.voiceDuration}">${mins}:${secs}</span>
-            <button class="voice-draft-action" onclick="Main.restartVoiceDraft('${f.id}')" title="تسجيل جديد"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
-            <button class="voice-draft-action danger" onclick="Main.removeFile('${f.id}')" title="حذف التسجيل"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
           </div>`;
         extraStyle = 'background: transparent; border: none; padding: 0; min-width: 250px;';
       } else if (f.type.startsWith('image/')) {
@@ -707,7 +694,7 @@ const Main = {
       return `
         <div class="attachment-item" style="${extraStyle}">
           ${content}
-          ${f.isVoice ? '' : `<button class="remove-attachment" style="background:rgba(0,0,0,0.5);color:#fff;" onclick="Main.removeFile('${f.id}')"><i data-lucide="x" style="width:14px;height:14px"></i></button>`}
+          <button class="remove-attachment" style="background:rgba(0,0,0,0.5);color:#fff;" onclick="Main.removeFile('${f.id}')"><i data-lucide="x" style="width:14px;height:14px"></i></button>
         </div>
       `;
     }).join('');
