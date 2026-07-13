@@ -12,9 +12,10 @@ const UI = {
     this.loadTheme();
     this.setupDropZone();
     this.initApiManagers();
-    if (!localStorage.getItem('welcome_seen')) {
-      this.showModal('welcome-api-modal');
-    }
+    // API keys stay available in Settings; the old key prompt must never
+    // interrupt the first chat experience.
+    const legacyWelcome = document.getElementById('welcome-api-modal');
+    if (legacyWelcome) legacyWelcome.remove();
     this.renderModelsModal();
     this.restoreSelectedModel();
     const webButton = document.getElementById('web-search-btn');

@@ -199,3 +199,45 @@
         max-width: 95%;
     }
 }
+
+/* Mobile shell repair: kept last so older desktop rules cannot leak through. */
+@media (max-width: 1023px) {
+  html, body { width:100% !important; height:100dvh !important; min-height:100dvh !important; overflow:hidden !important; overscroll-behavior:none; background:#080809 !important; }
+  .app-layout, .main, .split-container, .chat-panel { min-width:0 !important; min-height:0 !important; }
+  .app-layout, .main { width:100% !important; height:100dvh !important; max-height:100dvh !important; }
+  .main { padding-top:calc(env(safe-area-inset-top, 0px) + 62px) !important; overflow:hidden !important; background:#080809 !important; }
+  .split-container { display:flex !important; flex:1 1 auto !important; height:100% !important; overflow:hidden !important; }
+  .editor-panel, .resizer { display:none !important; }
+  .chat-panel { position:relative !important; display:flex !important; flex:1 1 auto !important; height:100% !important; overflow:hidden !important; padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 102px) !important; background:#080809 !important; }
+  .messages { flex:1 1 auto !important; min-height:0 !important; height:100% !important; padding:18px 14px calc(env(safe-area-inset-bottom, 0px) + 124px) !important; scroll-padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 124px) !important; }
+  .welcome { min-height:min-content !important; padding:22px 0 8px !important; justify-content:flex-start !important; }
+
+  /* Four controls always fit: new chat, private mode, model and menu. */
+  #floating-controls.floating-top-controls { position:fixed !important; inset:calc(env(safe-area-inset-top, 0px) + 9px) 10px auto !important; z-index:930 !important; display:flex !important; width:auto !important; height:44px !important; margin:0 !important; padding:4px !important; gap:5px !important; align-items:center !important; direction:rtl; background:rgba(18,18,20,.96) !important; border:1px solid rgba(255,255,255,.12) !important; border-radius:15px !important; box-shadow:0 10px 30px rgba(0,0,0,.34) !important; backdrop-filter:blur(18px) !important; }
+  #floating-controls .float-btn, #floating-controls .mobile-float-btn { display:inline-flex !important; visibility:visible !important; position:static !important; flex:0 0 34px !important; width:34px !important; height:34px !important; align-items:center !important; justify-content:center !important; margin:0 !important; padding:0 !important; color:#f4f4f5 !important; background:rgba(255,255,255,.07) !important; border:1px solid rgba(255,255,255,.09) !important; border-radius:11px !important; }
+  #floating-controls .float-model { display:flex !important; visibility:visible !important; flex:1 1 0 !important; min-width:0 !important; height:34px !important; padding:0 8px !important; align-items:center !important; gap:6px !important; overflow:hidden !important; color:#f4f4f5 !important; background:transparent !important; }
+  #floating-controls .float-model span:last-child { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #floating-controls .mobile-float-btn img { width:28px !important; height:28px !important; }
+
+  /* A real opaque full-screen drawer: no editor or page layer can show through. */
+  .sidebar { position:fixed !important; inset:0 !important; z-index:5000 !important; display:flex !important; width:100vw !important; min-width:100vw !important; height:100dvh !important; min-height:100dvh !important; overflow:hidden !important; isolation:isolate !important; contain:layout paint !important; opacity:0 !important; pointer-events:none !important; transform:translateX(105%) !important; background:#09090b !important; background-image:radial-gradient(90% 48% at 100% 0%, rgba(99,102,241,.14), transparent 60%) !important; border:0 !important; border-radius:0 !important; box-shadow:none !important; }
+  .sidebar::before, .sidebar::after { content:none !important; display:none !important; }
+  .sidebar:not(.collapsed) { opacity:1 !important; pointer-events:auto !important; transform:translateX(0) !important; }
+  .sidebar > * { position:relative !important; z-index:1 !important; }
+  .sidebar-header.mobile-only { display:flex !important; flex:0 0 auto !important; }
+  .mobile-sidebar-tools { display:grid !important; grid-template-columns:repeat(2, minmax(0, 1fr)) !important; flex:0 0 auto !important; padding:8px 14px 14px !important; gap:8px !important; background:transparent !important; border-bottom:1px solid rgba(255,255,255,.08) !important; }
+  .mobile-tool-card { min-height:46px !important; }
+  #chat-list { flex:1 1 auto !important; min-height:0 !important; overflow-y:auto !important; padding:12px 14px 16px !important; background:transparent !important; }
+  .sidebar-footer { flex:0 0 auto !important; background:#09090b !important; }
+
+  /* Composer is pinned above Android and iOS navigation areas. */
+  .input-wrap { position:fixed !important; right:0 !important; bottom:0 !important; left:0 !important; z-index:1000 !important; width:100% !important; max-width:none !important; margin:0 !important; padding:8px 10px calc(env(safe-area-inset-bottom, 0px) + 10px) !important; background:linear-gradient(to top, #080809 72%, rgba(8,8,9,.92) 87%, transparent) !important; }
+  .input-box { width:100% !important; margin:0 !important; border-radius:19px !important; }
+  .scroll-bottom-btn { bottom:calc(env(safe-area-inset-bottom, 0px) + 108px) !important; z-index:1001 !important; }
+
+  /* The model toolbar stays fixed; only model cards scroll underneath it. */
+  #model-picker-modal { z-index:10000 !important; align-items:stretch !important; }
+  #model-picker-modal .modal { width:100vw !important; height:100dvh !important; max-width:100vw !important; max-height:100dvh !important; border-radius:0 !important; overflow:hidden !important; }
+  #model-picker-modal .model-picker-toolbar { position:sticky !important; top:0 !important; z-index:20 !important; flex:0 0 auto !important; padding-top:calc(env(safe-area-inset-top, 0px) + 14px) !important; }
+  #model-picker-modal #dynamic-models-container { flex:1 1 auto !important; min-height:0 !important; height:auto !important; max-height:none !important; overflow-y:auto !important; overscroll-behavior:contain !important; padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 30px) !important; }
+}

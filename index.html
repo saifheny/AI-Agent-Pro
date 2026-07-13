@@ -36,6 +36,14 @@
   <meta name="twitter:image" content="https://ai-agent-pro.pages.dev/og-image.png">
   <meta name="twitter:image:alt" content="AI Agent Pro — منصة الذكاء الاصطناعي">
   <title>AI Agent Pro — أقوى منصة ذكاء اصطناعي عربية 2026 | محادثات ذكية ومحرر أكواد</title>
+  <script>
+    // Do not flash the workspace before a user has reached the sign-in page.
+    (() => {
+      const signedIn = localStorage.getItem('ai_logged_in') === 'true';
+      const profile = localStorage.getItem('ai_user');
+      if (!signedIn || !profile) location.replace('login.html');
+    })();
+  </script>
   <link rel="canonical" href="https://ai-agent-pro.pages.dev/">
   <script type="application/ld+json">
   {
@@ -1823,7 +1831,7 @@
   <script src="js/main.js"></script>
   <script>
     if ('serviceWorker' in navigator && location.protocol !== 'file:') {
-      navigator.serviceWorker.register('sw.js').catch(() => { });
+      navigator.serviceWorker.register('sw.js?v=6').catch(() => { });
     }
   </script>
 

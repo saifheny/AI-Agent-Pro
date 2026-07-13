@@ -426,6 +426,15 @@
   body:has(.f-input:focus)::before { opacity:0; }
   .wavy-divider path { fill:#0a0a0b; stroke:rgba(255,255,255,.18); stroke-width:.8; }
   @media (max-width: 900px) { .login-form-panel { width: 100%; } }
+
+  /* Phone and tablet login is a complete screen, not a cropped desktop panel. */
+  @media (max-width: 900px) {
+    html, body { width:100%; min-height:100dvh; height:100dvh; overflow:auto; }
+    .login-split { width:100%; min-height:100dvh; height:auto; }
+    .login-brand { display:none !important; }
+    .login-form-panel { width:100% !important; min-height:100dvh; height:auto; align-items:flex-start; overflow-y:auto; padding:max(24px, env(safe-area-inset-top, 0px)) 0 max(24px, env(safe-area-inset-bottom, 0px)); background:radial-gradient(circle at 20% 12%, rgba(59,130,246,.16), transparent 44%), radial-gradient(circle at 80% 88%, rgba(139,92,246,.14), transparent 48%), #09090b !important; }
+    .login-form-inner { width:min(100%, 460px); margin:auto; padding:32px 24px 44px !important; }
+  }
     </style>
 </head>
 <body>
