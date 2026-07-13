@@ -305,6 +305,7 @@ const Main = {
     this.setupIdleLock();
     this.newChat();
     this.setupInput();
+    this.setupMobileKeyboard();
     this.setupScrollWatcher();
     this.setupReadingProgress();
     this.setupNetworkMonitor();
@@ -708,14 +709,15 @@ const Main = {
     this.isIncognito = !this.isIncognito;
     const navLogo = document.querySelector('.nav-logo');
     const ghostBtn = document.getElementById('nav-incognito');
+    const mobileGhostBtn = document.getElementById('mobile-incognito-btn');
     const welcomeIcon = document.querySelector('.welcome-icon');
     if (this.isIncognito) {
       this.currentChatId = 'incognito_' + Date.now();
       this.messages = [];
       document.body.classList.add('incognito-mode');
       if (navLogo) { navLogo.dataset.originalHtml = navLogo.innerHTML; navLogo.innerHTML = '<i data-lucide="eye-off" style="width:22px;height:22px;color:#fff"></i>'; }
-      if (ghostBtn) ghostBtn.style.background = '#fff';
-      if (ghostBtn) ghostBtn.style.color = '#000';
+      ghostBtn?.classList.add('active');
+      mobileGhostBtn?.classList.add('active');
       if (welcomeIcon) {
         welcomeIcon.dataset.originalHtml = welcomeIcon.innerHTML;
         welcomeIcon.innerHTML = '<i data-lucide="eye-off" style="width:32px;height:32px;color:#fff"></i>';
@@ -727,7 +729,8 @@ const Main = {
     } else {
       document.body.classList.remove('incognito-mode');
       if (navLogo && navLogo.dataset.originalHtml) navLogo.innerHTML = navLogo.dataset.originalHtml;
-      if (ghostBtn) { ghostBtn.style.background = ''; ghostBtn.style.color = ''; }
+      ghostBtn?.classList.remove('active');
+      mobileGhostBtn?.classList.remove('active');
       if (welcomeIcon && welcomeIcon.dataset.originalHtml) {
         welcomeIcon.innerHTML = welcomeIcon.dataset.originalHtml;
       }
@@ -739,16 +742,15 @@ const Main = {
   },
   updateNavUI() {
     const incognitoBtn = document.getElementById('nav-incognito');
-    if (!incognitoBtn) return;
-    if (this.messages && this.messages.length > 0) {
-      if (!this.isIncognito) {
-        incognitoBtn.style.display = 'none';
-      } else {
-        incognitoBtn.style.display = 'flex';
-      }
-    } else {
-      incognitoBtn.style.display = 'flex';
-    }
+    const mobileIncognitoBtn = document.getElementById('mobile-incognito-btn');
+    const hasMessages = Boolean(this.messages && this.messages.length > 0);
+    const shouldShow = !hasMessages || this.isIncognito;
+    [incognitoBtn, mobileIncognitoBtn].forEach(button => {
+      if (!button) return;
+      if (button === mobileIncognitoBtn) button.classList.toggle('is-unavailable', !shouldShow);
+      else button.style.display = shouldShow ? 'flex' : 'none';
+      button.classList.toggle('active', this.isIncognito);
+    });
   },
   newChat() {
     if (this.isIncognito) {
@@ -756,9 +758,11 @@ const Main = {
       document.body.classList.remove('incognito-mode');
       const navLogo = document.querySelector('.nav-logo');
       const ghostBtn = document.getElementById('nav-incognito');
+      const mobileGhostBtn = document.getElementById('mobile-incognito-btn');
       const welcomeIcon = document.getElementById('welcome-icon-center');
       if (navLogo && navLogo.dataset.originalHtml) navLogo.innerHTML = navLogo.dataset.originalHtml;
-      if (ghostBtn) { ghostBtn.style.background = ''; ghostBtn.style.color = ''; }
+      ghostBtn?.classList.remove('active');
+      mobileGhostBtn?.classList.remove('active');
       if (welcomeIcon && welcomeIcon.dataset.originalHtml) {
         welcomeIcon.innerHTML = welcomeIcon.dataset.originalHtml;
       }
@@ -1087,10 +1091,10 @@ const Main = {
       const mobileIncogBtn = document.getElementById('mobile-incognito-btn');
       if (input.value.trim() && !this.isIncognito) {
         if (incognitoBtn) incognitoBtn.style.display = 'none';
-        if (mobileIncogBtn) mobileIncogBtn.style.display = 'none';
+        if (mobileIncogBtn) mobileIncogBtn.classList.add('is-unavailable');
       } else if (!input.value.trim() && (!this.messages || this.messages.length === 0)) {
         if (incognitoBtn) incognitoBtn.style.display = 'flex';
-        if (mobileIncogBtn) mobileIncogBtn.style.display = 'flex';
+        if (mobileIncogBtn) mobileIncogBtn.classList.remove('is-unavailable');
       }
 
       clearTimeout(this._typingTimer);
@@ -1374,6 +1378,29 @@ const Main = {
           ${actionRow}
         </div>
       </div>`;
+  },
+  setupMobileKeyboard() {
+    const input = document.getElementById('chat-input');
+    const viewport = window.visualViewport;
+    if (!input || !viewport) return;
+
+    const syncComposer = () => {
+      const keyboardOffset = Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop);
+      document.documentElement.style.setProperty('--keyboard-offset', `${Math.round(keyboardOffset)}px`);
+      document.body.classList.toggle('keyboard-open', keyboardOffset > 40 || document.activeElement === input);
+    };
+    viewport.addEventListener('resize', syncComposer);
+    viewport.addEventListener('scroll', syncComposer);
+    input.addEventListener('focus', () => requestAnimationFrame(syncComposer));
+    input.addEventListener('blur', () => {
+      window.setTimeout(() => {
+        if (document.activeElement !== input) {
+          document.documentElement.style.setProperty('--keyboard-offset', '0px');
+          document.body.classList.remove('keyboard-open');
+        }
+      }, 80);
+    });
+    syncComposer();
   },
   buildDownloadProgress(msgId, type, progress = 0) {
     const noun = type === 'video' ? 'الفيديو' : 'الصوت';
@@ -1667,6 +1694,7 @@ const Main = {
     const isImageOnlyMsg = hasImage && !hasVoice && !userTypedText;
     const userMsg = { role: 'user', content: text, display: displayHtml, time: this.now(), isVoiceOnly: isVoiceOnlyMsg, isImageOnly: isImageOnlyMsg, hasMedia: hasVoice || hasImage, files: this.uploadedFiles.map(f => ({ ...f })) };
     this.messages.push(userMsg);
+    document.body.classList.add('has-conversation');
     this.appendMessage(userMsg, true);
     this.updateNavUI();
     if (!this.isIncognito) this.autoTitleChat();
@@ -2338,6 +2366,8 @@ const Main = {
           try { this.appendMessage(m, false); } catch(e) { console.error('Failed to append message', e); }
         });
       }
+      document.body.classList.toggle('has-conversation', this.messages.length > 0);
+      this.updateNavUI();
       container.style.visibility = 'visible';
       container.style.opacity = '1';
     } catch(err) {

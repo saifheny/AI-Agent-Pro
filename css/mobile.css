@@ -241,3 +241,79 @@
   #model-picker-modal .model-picker-toolbar { position:sticky !important; top:0 !important; z-index:20 !important; flex:0 0 auto !important; padding-top:calc(env(safe-area-inset-top, 0px) + 14px) !important; }
   #model-picker-modal #dynamic-models-container { flex:1 1 auto !important; min-height:0 !important; height:auto !important; max-height:none !important; overflow-y:auto !important; overscroll-behavior:contain !important; padding-bottom:calc(env(safe-area-inset-bottom, 0px) + 30px) !important; }
 }
+
+/* Mobile conversation drawer: chats only. Categories live in the + tools panel. */
+@media (max-width: 1023px) {
+  .mobile-sidebar-tools,
+  #mobile-search-container { display:none !important; }
+
+  .sidebar-header.mobile-only { border-bottom:1px solid rgba(255,255,255,.08); padding-bottom:14px !important; }
+  #chat-list { padding-top:14px !important; }
+
+  /* The private-mode state is explicit but unobtrusive. */
+  #mobile-incognito-btn.active {
+    color:#111 !important;
+    background:#fff !important;
+    border-color:#fff !important;
+    box-shadow:0 0 0 3px rgba(255,255,255,.10), 0 8px 18px rgba(255,255,255,.15) !important;
+  }
+  #mobile-incognito-btn.active svg { color:#111 !important; }
+  #mobile-incognito-btn.is-unavailable { display:none !important; }
+
+  /* Small, quiet stars make the empty conversation feel alive and disappear on input/send. */
+  .chat-panel::before {
+    content:'';
+    position:absolute;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    opacity:.34;
+    background-image:
+      radial-gradient(circle at 12% 17%, rgba(255,255,255,.72) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 78% 12%, rgba(167,139,250,.72) 0 1px, transparent 1.8px),
+      radial-gradient(circle at 86% 44%, rgba(96,165,250,.55) 0 1px, transparent 1.6px),
+      radial-gradient(circle at 22% 62%, rgba(255,255,255,.5) 0 1px, transparent 1.7px),
+      radial-gradient(circle at 58% 72%, rgba(196,181,253,.58) 0 1px, transparent 1.8px),
+      radial-gradient(circle at 40% 34%, rgba(255,255,255,.42) 0 1px, transparent 1.7px);
+    transition:opacity .18s ease;
+  }
+  .chat-panel > * { position:relative; z-index:1; }
+  body.has-conversation .chat-panel::before,
+  body.user-typing .chat-panel::before { opacity:0; }
+
+  /* Only the composer tracks the software keyboard; the workspace stays fixed. */
+  .input-wrap {
+    bottom:var(--keyboard-offset, 0px) !important;
+    transition:bottom .13s ease-out, padding .13s ease-out !important;
+    will-change:bottom;
+  }
+  body.keyboard-open,
+  body.keyboard-open .main,
+  body.keyboard-open .split-container { transform:none !important; }
+}
+
+/* Open-link reader, shared by the mobile tools panel and compact tablets. */
+.web-reader-modal { width:min(680px, calc(100vw - 24px)) !important; max-height:min(760px, calc(100dvh - 24px)) !important; padding:0 !important; overflow:hidden !important; background:#101014 !important; }
+.web-reader-header { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; padding:22px 22px 10px; border-bottom:1px solid rgba(255,255,255,.08); }
+.web-reader-kicker { display:inline-flex; align-items:center; gap:6px; color:#c4b5fd; font-size:11px; font-weight:800; }
+.web-reader-kicker svg { width:15px; height:15px; }
+.web-reader-header h2 { margin:5px 0 0; color:#fff; font-size:22px; }
+.web-reader-help { margin:14px 22px; color:#a1a1aa; font-size:12px; line-height:1.65; }
+.web-reader-form { display:flex; gap:8px; margin:0 22px; }
+.web-reader-form input { min-width:0; flex:1; height:44px; padding:0 13px; color:#f4f4f5; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.11); border-radius:12px; outline:none; direction:ltr; text-align:left; }
+.web-reader-form input:focus { border-color:rgba(167,139,250,.75); box-shadow:0 0 0 3px rgba(139,92,246,.14); }
+.web-reader-form .send-btn-white { width:auto; min-width:76px; height:44px; border-radius:12px; gap:5px; }
+.web-reader-form .send-btn-white svg { width:17px; height:17px; }
+.web-reader-presets { display:flex; flex-wrap:wrap; gap:7px; padding:12px 22px; }
+.web-reader-presets button { padding:7px 10px; color:#d4d4d8; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.09); border-radius:9px; font:700 11px/1 var(--font-primary); }
+.web-reader-result { min-height:138px; max-height:42dvh; margin:0 22px 22px; padding:16px; overflow:auto; color:#c4c4cc; background:#09090b; border:1px solid rgba(255,255,255,.08); border-radius:14px; font-size:13px; line-height:1.8; }
+.web-reader-result > i { width:18px; height:18px; margin-left:8px; vertical-align:middle; color:#a78bfa; }
+.web-reader-result.loading { display:flex; align-items:center; gap:8px; }
+.web-reader-result.loading > i { animation:readerSpin .85s linear infinite; }
+.web-reader-result.error { color:#fecaca; }
+.web-reader-result.error > i { color:#f87171; }
+.web-reader-result-title { color:#fff; font-size:15px; font-weight:800; }
+.web-reader-result a { display:inline-block; margin-top:4px; color:#a78bfa; font-size:11px; }
+.web-reader-result p { margin:12px 0 0; white-space:pre-wrap; }
+@keyframes readerSpin { to { transform:rotate(360deg); } }
+@media (max-width:480px) { .web-reader-header { padding:18px 16px 8px; } .web-reader-help { margin-inline:16px; } .web-reader-form { margin-inline:16px; } .web-reader-presets { padding-inline:16px; } .web-reader-result { margin-inline:16px; margin-bottom:16px; max-height:38dvh; } }

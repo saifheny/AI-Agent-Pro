@@ -864,6 +864,64 @@ const UI = {
     if (overlay) overlay.classList.remove('open');
     if (sheet) sheet.classList.remove('open');
   },
+  openWebReader(url = '') {
+    this.showModal('web-reader-modal');
+    const input = document.getElementById('web-reader-url');
+    if (!input) return;
+    input.value = url;
+    if (url) this.navigateWebReader(null, url);
+    else setTimeout(() => input.focus(), 80);
+  },
+  async navigateWebReader(event, presetUrl = '') {
+    if (event) event.preventDefault();
+    const input = document.getElementById('web-reader-url');
+    const result = document.getElementById('web-reader-result');
+    const rawUrl = (presetUrl || input?.value || '').trim();
+    if (!rawUrl) {
+      this.toast('أدخل رابطًا عامًا أولًا.', 'warning');
+      input?.focus();
+      return;
+    }
+    if (input) input.value = rawUrl;
+    if (!result) return;
+
+    result.replaceChildren();
+    result.classList.add('loading');
+    const spinner = document.createElement('i');
+    spinner.setAttribute('data-lucide', 'loader-circle');
+    const status = document.createElement('span');
+    status.textContent = 'جارٍ قراءة المصدر…';
+    result.append(spinner, status);
+    try { lucide.createIcons(); } catch (e) {}
+
+    const reader = window.BrowserPlugin;
+    const page = reader?.navigate ? await reader.navigate(rawUrl) : { error: 'قارئ الويب غير متاح حاليًا.' };
+    result.classList.remove('loading');
+    result.replaceChildren();
+
+    if (page?.error) {
+      result.classList.add('error');
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', 'circle-alert');
+      const message = document.createElement('span');
+      message.textContent = 'تعذّر فتح هذا الرابط. تأكد أنه رابط عام ومتاح ثم حاول مرة أخرى.';
+      result.append(icon, message);
+    } else {
+      result.classList.remove('error');
+      const heading = document.createElement('div');
+      heading.className = 'web-reader-result-title';
+      heading.textContent = page.title || 'ملخص المصدر';
+      const source = document.createElement('a');
+      source.href = page.url;
+      source.target = '_blank';
+      source.rel = 'noopener noreferrer';
+      source.textContent = 'فتح المصدر الأصلي ↗';
+      const excerpt = document.createElement('p');
+      excerpt.textContent = page.text || 'لم يُرجع المصدر نصًا قابلًا للقراءة.';
+      result.append(heading, source, excerpt);
+    }
+    try { lucide.createIcons(); } catch (e) {}
+  },
   openTerminal() {
     this.openTool('coding');
     if (Editor && Editor.Terminal) {
