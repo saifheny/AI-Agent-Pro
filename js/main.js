@@ -654,6 +654,17 @@ const Main = {
       this.updateStorageUI();
     }
   },
+  restartVoiceDraft(id) {
+    if (this.isListening || this.voiceFinalizing) {
+      UI.toast('انتظر حتى يكتمل التسجيل الحالي أولًا.', 'info');
+      return;
+    }
+    const draft = this.uploadedFiles.find(file => file.id === id && file.isVoice);
+    if (!draft) return;
+    this.removeFile(id);
+    UI.toast('ابدأ التسجيل من جديد، ويمكنك إيقافه ومتابعته قبل الحفظ.', 'info');
+    this.toggleVoice();
+  },
   renderAttachments() {
     const previewEl = document.getElementById('attachments-preview');
     if (!previewEl) return;
@@ -675,6 +686,8 @@ const Main = {
             <button class="voice-play-pause" onclick="Main.playAudioMsg(this, '${f.content}')"><i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i></button>
             <div class="voice-wave-visualizer" onclick="Main.seekAudio(event, this)">${bars}</div>
             <span class="voice-time" data-duration="${f.voiceDuration}">${mins}:${secs}</span>
+            <button class="voice-draft-action" onclick="Main.restartVoiceDraft('${f.id}')" title="تسجيل جديد"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+            <button class="voice-draft-action danger" onclick="Main.removeFile('${f.id}')" title="حذف التسجيل"><i data-lucide="trash-2" style="width:14px;height:14px"></i></button>
           </div>`;
         extraStyle = 'background: transparent; border: none; padding: 0; min-width: 250px;';
       } else if (f.type.startsWith('image/')) {
@@ -694,7 +707,7 @@ const Main = {
       return `
         <div class="attachment-item" style="${extraStyle}">
           ${content}
-          <button class="remove-attachment" style="background:rgba(0,0,0,0.5);color:#fff;" onclick="Main.removeFile('${f.id}')"><i data-lucide="x" style="width:14px;height:14px"></i></button>
+          ${f.isVoice ? '' : `<button class="remove-attachment" style="background:rgba(0,0,0,0.5);color:#fff;" onclick="Main.removeFile('${f.id}')"><i data-lucide="x" style="width:14px;height:14px"></i></button>`}
         </div>
       `;
     }).join('');
@@ -1645,6 +1658,11 @@ const Main = {
     let text = input.value.trim();
     const userTypedText = text;
     if (!text && !this.uploadedFiles.length && !this.pendingVoiceBlob) return;
+    const attachedVoiceNotes = this.uploadedFiles.filter(file => file.isVoice);
+    if (!text && attachedVoiceNotes.length && !attachedVoiceNotes.some(file => String(file.voiceTranscript || '').trim())) {
+      UI.toast('لم يكتمل تحويل التسجيل إلى نص بعد. أعد التسجيل أو أضف مفتاح Groq/OpenAI للنسخ الصوتي.', 'warning');
+      return;
+    }
     let displayHtml = text ? this.linkify(this.escHtml(text)) : '';
     let attachmentsHtml = '';
     let payloadContent = null;
@@ -1694,6 +1712,7 @@ const Main = {
     const isImageOnlyMsg = hasImage && !hasVoice && !userTypedText;
     const userMsg = { role: 'user', content: text, display: displayHtml, time: this.now(), isVoiceOnly: isVoiceOnlyMsg, isImageOnly: isImageOnlyMsg, hasMedia: hasVoice || hasImage, files: this.uploadedFiles.map(f => ({ ...f })) };
     this.messages.push(userMsg);
+    this.saveData(); // Persist immediately so a new voice can never replace prior chat history.
     document.body.classList.add('has-conversation');
     this.appendMessage(userMsg, true);
     this.updateNavUI();
@@ -2410,6 +2429,8 @@ const Main = {
   voiceAnimationFrame: null,
   voicePaused: false,
   voiceSeconds: 0,
+  recognitionShouldRestart: false,
+  voiceFinalizing: false,
   async toggleVoice() {
     const aiUser = localStorage.getItem('ai_user');
     if (!aiUser || JSON.parse(aiUser).type === 'guest') {
@@ -2437,18 +2458,25 @@ const Main = {
       this.mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) this.audioChunks.push(e.data);
       };
-      this.mediaRecorder.onstop = () => {
+      this.mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(t => t.stop());
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/webm' });
         if (audioBlob.size > 1000) {
           const audioUrl = URL.createObjectURL(audioBlob);
-          this._addVoiceAsAttachment(audioBlob, audioUrl);
+          const duration = Math.floor(this.voiceTicks / 10);
+          const browserTranscript = this.pendingVoiceTranscript.trim();
+          this.voiceFinalizing = true;
+          UI.toast('جارٍ تحويل التسجيل الصوتي إلى نص…', 'info');
+          const transcript = await this.transcribeVoice(audioBlob, browserTranscript);
+          this._addVoiceAsAttachment(audioBlob, audioUrl, transcript, duration);
+          this.voiceFinalizing = false;
         }
       };
       this.mediaRecorder.start();
       this.isListening = true;
       this.voicePaused = false;
       this.pendingVoiceTranscript = '';
+      this.recognitionShouldRestart = true;
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         this.recognition = new SpeechRecognition();
@@ -2459,13 +2487,26 @@ const Main = {
           let interim = '';
           for (let i = event.resultIndex; i < event.results.length; ++i) {
             if (event.results[i].isFinal) {
-              this.pendingVoiceTranscript += event.results[i][0].transcript;
+              this.pendingVoiceTranscript += `${event.results[i][0].transcript} `;
             } else {
               interim += event.results[i][0].transcript;
             }
           }
         };
-        this.recognition.start();
+        this.recognition.onend = () => {
+          if (!this.isListening || this.voicePaused || !this.recognitionShouldRestart) return;
+          window.setTimeout(() => {
+            if (this.isListening && !this.voicePaused && this.recognitionShouldRestart) {
+              try { this.recognition.start(); } catch (e) {}
+            }
+          }, 120);
+        };
+        this.recognition.onerror = (event) => {
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            this.recognitionShouldRestart = false;
+          }
+        };
+        try { this.recognition.start(); } catch (e) {}
       }
       document.getElementById('input-row-main').style.display = 'none';
       const inputContainer = document.getElementById('chat-input-container');
@@ -2502,6 +2543,7 @@ const Main = {
     if (!this.isListening) return;
     this.isListening = false;
     this.voicePaused = false;
+    this.recognitionShouldRestart = false;
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
     }
@@ -2533,6 +2575,7 @@ const Main = {
     } else {
       if (this.mediaRecorder.state === 'paused') this.mediaRecorder.resume();
       if (this.audioContext?.state === 'suspended') this.audioContext.resume();
+      this.recognitionShouldRestart = true;
       if (this.recognition) { try { this.recognition.start(); } catch (e) {} }
       if (button) button.innerHTML = '<i data-lucide="pause" style="width:20px;height:20px"></i>';
     }
@@ -2542,6 +2585,7 @@ const Main = {
     if (!this.isListening) return;
     this.isListening = false;
     this.voicePaused = false;
+    this.recognitionShouldRestart = false;
 
     // Forcefully stop hardware microphone tracks immediately
     if (this.micStream) {
@@ -2574,14 +2618,45 @@ const Main = {
     if (inputContainer) inputContainer.style.display = 'flex';
     if (voiceUi) voiceUi.style.display = 'none';
   },
-  _addVoiceAsAttachment(audioBlob, audioUrl) {
+  async transcribeVoice(audioBlob, browserTranscript = '') {
+    const localTranscript = String(browserTranscript || '').trim();
+    if (localTranscript) return localTranscript;
+
+    const readFirstKey = (provider) => {
+      try { return JSON.parse(localStorage.getItem(`api_keys_${provider}`) || '[]').find(Boolean) || ''; }
+      catch (e) { return ''; }
+    };
+    const services = [
+      { key: readFirstKey('groq'), endpoint: 'https://api.groq.com/openai/v1/audio/transcriptions', model: 'whisper-large-v3-turbo' },
+      { key: readFirstKey('openai'), endpoint: 'https://api.openai.com/v1/audio/transcriptions', model: 'gpt-4o-mini-transcribe' }
+    ].filter(service => service.key);
+
+    for (const service of services) {
+      try {
+        const form = new FormData();
+        form.append('file', audioBlob, 'voice-message.webm');
+        form.append('model', service.model);
+        form.append('language', 'ar');
+        const response = await fetch(service.endpoint, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${service.key}` },
+          body: form
+        });
+        if (!response.ok) continue;
+        const data = await response.json();
+        const text = String(data.text || '').trim();
+        if (text) return text;
+      } catch (e) {}
+    }
+    return '';
+  },
+  _addVoiceAsAttachment(audioBlob, audioUrl, transcript = '', totalSeconds = Math.floor(this.voiceTicks / 10)) {
     const currentVoiceNotes = this.uploadedFiles.filter(f => f.isVoice).length;
     if (currentVoiceNotes >= 2) {
       UI.toast('لا يمكن إرفاق أكثر من رسالتين صوتيتين في المرة الواحدة', 'warning');
       return;
     }
     const id = 'voice_' + Date.now() + '_' + Math.random().toString(36).substr(2,4);
-    const totalSeconds = Math.floor(this.voiceTicks / 10);
     const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
     const secs = (totalSeconds % 60).toString().padStart(2, '0');
     this.uploadedFiles.push({
@@ -2593,10 +2668,10 @@ const Main = {
       isVoice: true,
       voiceBlob: audioBlob,
       voiceDuration: totalSeconds,
-      voiceTranscript: this.pendingVoiceTranscript || ''
+      voiceTranscript: String(transcript || '').trim()
     });
     this.renderAttachments();
-    UI.toast('تم إضافة التسجيل الصوتي', 'success');
+    UI.toast(transcript ? 'تم تحويل التسجيل إلى نص وإضافته' : 'تم حفظ التسجيل — أعد التسجيل إن لم يظهر النص', transcript ? 'success' : 'warning');
   },
   showVoicePreview(audioUrl) {
     const previewArea = document.getElementById('attachments-preview');

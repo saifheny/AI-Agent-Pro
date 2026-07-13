@@ -267,7 +267,7 @@
     inset:0;
     z-index:0;
     pointer-events:none;
-    opacity:.34;
+    opacity:.18;
     background-image:
       radial-gradient(circle at 12% 17%, rgba(255,255,255,.72) 0 1px, transparent 1.6px),
       radial-gradient(circle at 78% 12%, rgba(167,139,250,.72) 0 1px, transparent 1.8px),
@@ -290,6 +290,27 @@
   body.keyboard-open,
   body.keyboard-open .main,
   body.keyboard-open .split-container { transform:none !important; }
+
+  /* Keep the model back action visible above the fixed model toolbar. */
+  #model-picker-modal .model-picker-back {
+    position:fixed !important;
+    top:calc(env(safe-area-inset-top, 0px) + 11px) !important;
+    right:14px !important;
+    z-index:10020 !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    gap:5px !important;
+    width:auto !important;
+    min-width:44px !important;
+    height:40px !important;
+    padding:0 11px !important;
+    color:#f8fafc !important;
+    background:rgba(24,24,27,.96) !important;
+    border:1px solid rgba(255,255,255,.14) !important;
+    border-radius:12px !important;
+    box-shadow:0 10px 26px rgba(0,0,0,.34) !important;
+  }
+  #model-picker-modal .model-picker-back span { font-size:12px; font-weight:800; }
 }
 
 /* Open-link reader, shared by the mobile tools panel and compact tablets. */

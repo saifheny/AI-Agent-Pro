@@ -623,6 +623,9 @@
                 <div class="voice-record-ui" style="display:flex; align-items:center; gap:12px; flex:1;">
                   <div class="voice-timer" id="voice-timer" style="font-family:monospace; font-size:14px;">00:00</div>
                   <div class="voice-wave-container" id="voice-wave-container" style="flex:1;"></div>
+                  <button class="icon-btn" id="voice-pause-btn" onclick="Main.pauseVoice()" title="إيقاف مؤقت أو متابعة">
+                    <i data-lucide="pause" style="width:20px;height:20px"></i>
+                  </button>
                   <button class="icon-btn text-danger" onclick="Main.cancelVoice()" title="إلغاء">
                     <i data-lucide="trash-2" style="width:20px;height:20px"></i>
                   </button>
@@ -1288,9 +1291,8 @@
   </div>
   <div class="modal-overlay" id="model-picker-modal" onclick="UI.closeModalOutside(event,'model-picker-modal')">
     <div class="modal">
-      <button onclick="UI.closeModal('model-picker-modal')" class="icon-btn close-sidebar-btn"
-        style="position:absolute; top:16px; right:16px; z-index:1001; background:rgba(15,15,15,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;"><i
-          data-lucide="x" style="width:22px;height:22px"></i></button>
+      <button onclick="UI.closeModal('model-picker-modal')" class="icon-btn model-picker-back"
+        aria-label="العودة للمحادثة" title="العودة للمحادثة"><i data-lucide="arrow-right" style="width:21px;height:21px"></i><span>رجوع</span></button>
       <div class="model-picker-toolbar">
         <div>
           <span class="model-picker-kicker"><i data-lucide="sparkles" style="width:14px;height:14px"></i> نماذج حديثة</span>
