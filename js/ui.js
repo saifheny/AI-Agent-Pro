@@ -16,6 +16,9 @@ const UI = {
       this.showModal('welcome-api-modal');
     }
     this.renderModelsModal();
+    this.restoreSelectedModel();
+    const webButton = document.getElementById('web-search-btn');
+    if (webButton) webButton.onclick = () => Main.setMode(Main.currentMode === 'web-search' ? 'general' : 'web-search');
     this.setupCommandPalette();
     document.addEventListener('click', (e) => {
       const sheet = document.getElementById('mobile-tools-sheet');
@@ -36,21 +39,21 @@ const UI = {
     this.setTheme(this.theme === 'dark' ? 'light' : 'dark');
   },
   setTheme(name) {
-    if (name !== 'dark' && name !== 'light') name = 'dark';
+    name = 'dark';
     this.theme = name;
     this.allThemes.forEach(t => document.body.classList.remove(t));
     document.body.classList.add('theme-' + name);
-    
-    
+
+
     const themeColor = name === 'dark' ? '#000000' : '#ffffff';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
-    
+
     const iconEl = document.getElementById('theme-icon');
     if (iconEl) { iconEl.setAttribute('data-lucide', name === 'dark' ? 'sun' : 'moon'); }
-    
+
     const dashIcon = document.getElementById('theme-icon-dashboard');
     if (dashIcon) { dashIcon.setAttribute('data-lucide', name === 'dark' ? 'sun' : 'moon'); }
-    
+
     localStorage.setItem('theme', name);
     try { lucide.createIcons(); } catch(e) {}
     const picker = document.getElementById('theme-picker');
@@ -90,7 +93,7 @@ const UI = {
     }
   },
   toggleToolsPanel() {
-    this.toggleSidebar(); 
+    this.toggleSidebar();
   },
   toggleMobileMenu() {
     this.toggleSidebar();
@@ -103,11 +106,9 @@ const UI = {
     if (overlay) overlay.classList.toggle('show', isShowing);
   },
   loadTheme() {
-    let saved = localStorage.getItem('theme') || 'dark';
-    if (saved !== 'dark' && saved !== 'light') saved = 'dark';
-    this.setTheme(saved);
-    const savedAccent = localStorage.getItem('accentColor');
-    if (savedAccent) this.setAccentColor(savedAccent);
+    this.setTheme('dark');
+    localStorage.setItem('theme', 'dark');
+    this.setAccentColor(null);
   },
   openTool(toolId) {
     if (localStorage.getItem('isGuest') === 'true' && (toolId === 'web-search' || toolId === 'creative' || toolId === 'coding')) {
@@ -116,17 +117,13 @@ const UI = {
     }
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-' + toolId)?.classList.add('active');
-    
+
     // Also update fullscreen picker items if it exists
     document.querySelectorAll('.picker-item').forEach(b => b.classList.remove('active'));
     document.getElementById('picker-' + toolId)?.classList.add('active');
 
-    if (toolId === 'coding') {
-      Editor.toggleSplitScreen();
-    } else {
-      if(typeof Main !== 'undefined') Main.setMode(toolId);
-      if (window.innerWidth <= 768 && this.sidebarOpen) this.toggleSidebar();
-    }
+    if(typeof Main !== 'undefined') Main.setMode(toolId);
+    if (window.innerWidth <= 1023 && this.sidebarOpen) this.toggleSidebar();
   },
   toggleSearch() {
     const bar = document.getElementById('search-bar');
@@ -149,13 +146,13 @@ const UI = {
   },
   updateAccountStats() {
     try {
-      
+
       const chats = JSON.parse(localStorage.getItem('chats') || '[]');
       const chatCount = Array.isArray(chats) ? chats.length : 0;
       const el1 = document.getElementById('account-stat-chats');
       if (el1) el1.textContent = chatCount;
 
-      
+
       let msgCount = 0;
       if (Array.isArray(chats)) {
         chats.forEach(c => { if (c.messages) msgCount += c.messages.length; });
@@ -163,7 +160,7 @@ const UI = {
       const el2 = document.getElementById('account-stat-msgs');
       if (el2) el2.textContent = msgCount;
 
-      
+
       let keyCount = 0;
       ['openai','gemini','anthropic','groq','mistral','deepseek','alibaba','xai','perplexity'].forEach(p => {
         const keys = JSON.parse(localStorage.getItem('api_keys_' + p) || '[]');
@@ -172,11 +169,11 @@ const UI = {
       const el3 = document.getElementById('account-stat-keys');
       if (el3) el3.textContent = keyCount;
 
-      
+
       const themeText = document.getElementById('theme-text');
       if (themeText) themeText.textContent = this.theme === 'dark' ? 'داكن' : 'فاتح';
 
-      
+
       const authBtn = document.getElementById('dynamic-logout-btn');
       if (authBtn) {
         const isLoggedIn = typeof firebase !== 'undefined' && firebase.auth && firebase.auth().currentUser;
@@ -211,6 +208,7 @@ const UI = {
   },
   selectModel(modelId, name, optId) {
     Main.currentModel = modelId;
+    localStorage.setItem('selected_model', modelId);
     const nameDisplay = document.getElementById('model-name-display');
     if (nameDisplay) nameDisplay.textContent = name;
     const currentModelDisplay = document.getElementById('current-model-display');
@@ -243,7 +241,38 @@ const UI = {
     document.querySelectorAll('.model-option').forEach(el => el.style.border = '1px solid transparent');
     const selectedOpt = document.querySelector(`.model-option[data-model="${modelId}"]`);
     if (selectedOpt) selectedOpt.style.border = '1px solid var(--accent)';
-    this.toast(`تم تغيير النموذج إلى ${name}`, 'success');
+    this.celebrateModelSelection(name, glowColor);
+  },
+  restoreSelectedModel() {
+    const selectedId = localStorage.getItem('selected_model');
+    if (!selectedId || typeof Main === 'undefined') return;
+    let selectedName = selectedId === 'default-pro' ? 'AI Agent Pro' : '';
+    Object.values(Main.ALL_MODELS || {}).some(provider => {
+      const found = provider.models?.find(model => model.id === selectedId);
+      if (found) selectedName = found.name;
+      return Boolean(found);
+    });
+    if (!selectedName) return;
+    Main.currentModel = selectedId;
+    ['model-name-display', 'current-model-display', 'mobile-current-model'].forEach(id => {
+      const element = document.getElementById(id);
+      if (element) element.textContent = selectedName;
+    });
+  },
+  celebrateModelSelection(name, color) {
+    const burst = document.createElement('div');
+    burst.className = 'model-selection-burst';
+    burst.setAttribute('aria-hidden', 'true');
+    const colors = [color, '#ffffff', '#a78bfa', '#60a5fa', '#34d399'];
+    burst.innerHTML = Array.from({ length: 22 }, (_, index) => {
+      const angle = (360 / 22) * index + (Math.random() * 14 - 7);
+      const distance = 55 + Math.random() * 82;
+      const size = 4 + Math.random() * 5;
+      return `<span style="--burst-angle:${angle}deg;--burst-distance:${distance}px;--burst-color:${colors[index % colors.length]};--burst-size:${size}px"></span>`;
+    }).join('');
+    document.body.appendChild(burst);
+    setTimeout(() => burst.remove(), 850);
+    this.toast(`تم اختيار ${name} بنجاح`, 'success');
   },
   skipWelcome() {
     localStorage.setItem('welcome_seen', 'true');
@@ -303,14 +332,14 @@ const UI = {
     input.value = '';
     this.loadApiKeys(provider);
     this.toast('تمت إضافة مفتاح API بنجاح', 'success');
-    if (provider === 'openai') this.selectModel('gpt-5.5', 'GPT-5.5');
-    else if (provider === 'gemini') this.selectModel('gemini-3.1-pro', 'Gemini 3.1 Pro');
-    else if (provider === 'anthropic') this.selectModel('claude-sonnet-4.6', 'Claude Sonnet 4.6');
-    else if (provider === 'groq') this.selectModel('llama-4-maverick', 'Llama 4 Maverick');
+    if (provider === 'openai') this.selectModel('gpt-5.4', 'GPT-5.4');
+    else if (provider === 'gemini') this.selectModel('gemini-3.1-pro-preview', 'Gemini 3.1 Pro');
+    else if (provider === 'anthropic') this.selectModel('claude-sonnet-4-6', 'Claude Sonnet 4.6');
+    else if (provider === 'groq') this.selectModel('openai-gpt-oss-120b', 'GPT-OSS 120B');
     else if (provider === 'mistral') this.selectModel('mistral-large', 'Mistral Large');
-    else if (provider === 'deepseek') this.selectModel('deepseek-v3', 'DeepSeek V3');
+    else if (provider === 'deepseek') this.selectModel('deepseek-v4-pro', 'DeepSeek V4 Pro');
     else if (provider === 'alibaba') this.selectModel('qwen-max-2025', 'Qwen Max 2.5');
-    else if (provider === 'xai') this.selectModel('grok-3', 'Grok 3');
+    else if (provider === 'xai') this.selectModel('grok-4-5', 'Grok 4.5');
     else if (provider === 'perplexity') this.selectModel('sonar-pro', 'Sonar Pro');
   },
   removeApiKey(provider, index) {
@@ -485,7 +514,7 @@ const UI = {
   },
   doResize(e) {
     if (!UI.isResizing) return;
-    const dx = UI.startX - e.clientX; 
+    const dx = UI.startX - e.clientX;
     const newW = Math.max(300, Math.min(UI.startW + dx, window.innerWidth * 0.8));
     document.getElementById('editor-panel').style.width = newW + 'px';
   },
@@ -515,7 +544,28 @@ const UI = {
       }
     });
   },
-  renderModelsModal(filterText = '') {
+  hasApiKey(provider) {
+    if (provider === 'local' || provider === 'pollinations') return true;
+    try {
+      return JSON.parse(localStorage.getItem(`api_keys_${provider}`) || '[]').some(Boolean);
+    } catch (e) {
+      return false;
+    }
+  },
+  activateModel(provider, modelId, modelName) {
+    const model = Main.ALL_MODELS?.[provider]?.models?.find(item => item.id === modelId);
+    if (model?.asyncOnly) {
+      this.toast('هذا النموذج يحتاج مسار مهام غير متزامن غير مفعّل بعد في التطبيق.', 'info');
+      return;
+    }
+    if (!this.hasApiKey(provider)) {
+      this.showModelInstructions(provider, modelId, modelName);
+      return;
+    }
+    this.selectModel(modelId, modelName);
+    this.closeModal('model-picker-modal');
+  },
+  renderModelsModal() {
     const container = document.getElementById('dynamic-models-container');
     if (!container) return;
     const companyColors = {
@@ -530,30 +580,20 @@ const UI = {
       xai: { glow: '#FFFFFF' },
       perplexity: { glow: '#2DD4BF' }
     };
-    let html = '';
-    const query = filterText.toLowerCase();
-    if (!query) {
-      html += `
+    let html = `
         <div class="models-grid-premium">
-          <div class="quick-prompt" onclick="UI.selectModel('default-pro', 'AI Agent Pro'); UI.closeModal('model-picker-modal');" data-model="default-pro" style="grid-column: 1 / -1; height: 160px; background: linear-gradient(to bottom, var(--accent-glow) 0%, var(--bg-secondary) 100%);">
-            <i data-lucide="zap" class="grid-icon" style="color:var(--accent); opacity:0.9; width:24px; height:24px;"></i>
+          <div class="quick-prompt" onclick="UI.selectModel('default-pro', 'AI Agent Pro'); UI.closeModal('model-picker-modal');" data-model="default-pro" style="grid-column: 1 / -1; height: 144px; background: linear-gradient(to bottom, var(--accent-glow) 0%, var(--bg-secondary) 100%);">
+            <i data-lucide="sparkles" class="grid-icon" style="color:var(--accent); opacity:0.9; width:24px; height:24px;"></i>
             <div style="position:absolute; top:12px; left:12px; z-index:5;">
-              <div style="background:var(--accent-glow);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;color:var(--text-primary);border:1px solid var(--accent);">النظام الأساسي</div>
+              <div style="background:var(--accent-glow);padding:4px 12px;border-radius:20px;font-size:10px;font-weight:800;color:var(--text-primary);border:1px solid var(--accent);">اختيار ذكي</div>
             </div>
             <div class="quick-prompt-title" style="font-size:24px; color:var(--text-primary);">AI Agent Pro</div>
-            <div class="quick-prompt-sub" style="font-size:12px; color:var(--text-secondary);">أذكى وأسرع تجربة بمعايير 2026</div>
+            <div class="quick-prompt-sub" style="font-size:12px; color:var(--text-secondary);">يوائم نمط الاستجابة مع نوع المهمة</div>
           </div>
       `;
-    } else {
-      html += `<div class="models-grid-premium">`;
-    }
     for (const [providerKey, providerData] of Object.entries(Main.ALL_MODELS)) {
-      const filteredModels = providerData.models.filter(m => 
-        m.name.toLowerCase().includes(query) || 
-        m.desc.toLowerCase().includes(query) ||
-        providerData.name.toLowerCase().includes(query)
-      );
-      if (filteredModels.length === 0) continue;
+      const providerModels = providerData.models || [];
+      if (providerModels.length === 0) continue;
       const colors = companyColors[providerKey] || companyColors.local;
       html += `
         <div style="grid-column: 1 / -1; margin: 24px 0 12px; display: flex; align-items: center; gap: 12px;">
@@ -563,12 +603,11 @@ const UI = {
           <h3 style="margin:0;font-size:16px;font-weight:900;">${providerData.name}</h3>
         </div>
       `;
-      filteredModels.forEach(m => {
-        const isLocal = providerKey === 'local';
-        const badge = m.isFree ? '<span class="badge-green">FREE</span>' : '<span class="badge-purple">PRO</span>';
-        const clickAction = (isLocal || !m.isFree) 
-          ? `UI.showModelInstructions('${providerKey}', '${m.id}', '${m.name}')`
-          : `UI.selectModel('${m.id}', '${m.name}'); document.getElementById('model-search-input').value=''; UI.closeModal('model-picker-modal');`;
+      providerModels.forEach(m => {
+        const badge = m.reasoning
+          ? '<span class="badge-purple">تفكير عميق</span>'
+          : (providerKey === 'local' || providerKey === 'pollinations' ? '<span class="badge-green">متاح</span>' : '<span class="badge-purple">API</span>');
+        const clickAction = `UI.activateModel('${providerKey}', '${m.id}', '${m.name.replace(/'/g, "\\'")}')`;
         html += `
           <div class="quick-prompt" onclick="${clickAction}" data-model="${m.id}" style="height:120px; background: linear-gradient(to bottom, ${colors.glow}40 0%, var(--bg-secondary) 100%); padding:16px;">
             <i data-lucide="${providerData.icon}" class="grid-icon" style="color:${colors.glow}; opacity:0.8;"></i>
@@ -577,9 +616,6 @@ const UI = {
             <div class="quick-prompt-sub" style="text-align:center; opacity:0.7; font-size:10px; color:var(--text-secondary);">${m.desc}</div>
           </div>`;
       });
-    }
-    if (html === '<div class="models-grid-premium">') {
-      html += `<div style="grid-column: 1/-1; text-align:center; padding: 40px; color:var(--text3);">لا توجد نتائج تطابق بحثك</div>`;
     }
     html += `</div>`;
     container.innerHTML = html;
@@ -726,9 +762,9 @@ const UI = {
     let filtered = this.PROMPTS_DATA;
     if (filter) {
       const q = filter.toLowerCase();
-      filtered = this.PROMPTS_DATA.filter(p => 
-        p.title.toLowerCase().includes(q) || 
-        p.cat.toLowerCase().includes(q) || 
+      filtered = this.PROMPTS_DATA.filter(p =>
+        p.title.toLowerCase().includes(q) ||
+        p.cat.toLowerCase().includes(q) ||
         p.prompt.toLowerCase().includes(q)
       );
     }
@@ -744,7 +780,7 @@ const UI = {
     html += `
       <div style="margin-bottom:24px; position:sticky; top:0; background:transparent; padding:12px 0; z-index:10;">
         <div style="position:relative; display:flex; align-items:center;">
-          <input type="text" placeholder="ابحث في 50+ أمر ذكي..." oninput="UI.renderPrompts(this.value)" 
+          <input type="text" placeholder="ابحث في 50+ أمر ذكي..." oninput="UI.renderPrompts(this.value)"
                  style="width:100%; height:48px; background:rgba(0,0,0,0.4); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:0 16px 0 44px; color:white; font-size:14px;">
           <i data-lucide="search" style="position:absolute; left:16px; width:18px; height:18px; color:rgba(255,255,255,0.4);"></i>
         </div>
@@ -769,7 +805,7 @@ const UI = {
               ${items.map(p => {
                 const safePrompt = p.prompt.replace(/\\n/g, '\\\\n').replace(/"/g, '&quot;');
                 return `
-                <div class="prompt-card-premium" 
+                <div class="prompt-card-premium"
                      onclick="UI.insertPromptToInput(\`${safePrompt}\`)"
                      ondblclick="UI.openPromptEditor(\`${safePrompt}\`)"
                      style="background:${colors.bg}; border:1px solid rgba(255,255,255,0.05); position:relative; overflow:hidden;">
@@ -891,6 +927,50 @@ UI.isInstalledPWA = function() {
   if (window.navigator.standalone === true) return true;
   return false;
 };
+UI.showInstallBrowserReminder = function(force = false) {
+  if (UI.isInstalledPWA() || !('Notification' in window) || Notification.permission !== 'granted') return false;
+  const key = 'pwa_browser_reminder_ts';
+  const lastShown = Number(localStorage.getItem(key) || 0);
+  const cooldown = 24 * 60 * 60 * 1000;
+  if (!force && Date.now() - lastShown < cooldown) return false;
+  try {
+    const reminder = new Notification('ثبّت AI Agent Pro', {
+      body: 'أضف التطبيق لجهازك لفتحه بسرعة وتجربة أكثر تركيزاً.',
+      icon: 'ai_avatar.png',
+      badge: 'ai_avatar.png',
+      tag: 'ai-agent-pro-install',
+      renotify: false
+    });
+    reminder.onclick = () => {
+      window.focus();
+      UI.checkPWAInstall();
+      reminder.close();
+    };
+    localStorage.setItem(key, String(Date.now()));
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+UI.enableInstallReminder = async function() {
+  if (!('Notification' in window)) {
+    UI.toast('متصفحك لا يدعم إشعارات التثبيت.', 'info');
+    return;
+  }
+  if (Notification.permission === 'denied') {
+    UI.toast('فعّل الإشعارات من إعدادات المتصفح أولاً.', 'info');
+    return;
+  }
+  try {
+    const permission = await Notification.requestPermission();
+    if (permission === 'granted') {
+      UI.showInstallBrowserReminder(true);
+      UI.toast('تم تفعيل تذكير التثبيت من المتصفح.', 'success');
+    }
+  } catch (e) {
+    UI.toast('تعذر طلب إذن الإشعارات.', 'error');
+  }
+};
 UI.checkPWAInstall = function() {
   if (UI.isInstalledPWA()) return;
   if (document.querySelector('.modal-overlay.open')) {
@@ -902,6 +982,7 @@ UI.checkPWAInstall = function() {
     const elapsed = Date.now() - parseInt(skipped);
     if (elapsed < 24 * 60 * 60 * 1000) return;
   }
+  if (UI.showInstallBrowserReminder()) return;
   const gate = document.getElementById('pwa-install-gate');
   if (!gate) return;
   gate.style.display = 'flex';

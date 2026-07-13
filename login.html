@@ -86,7 +86,7 @@
       justify-content: center;
       margin: 0 auto 32px;
       backdrop-filter: blur(20px);
-      
+
       animation: logoFloat 4s ease-in-out infinite;
     }
     @keyframes logoFloat {
@@ -159,7 +159,7 @@
       -webkit-backdrop-filter: blur(16px);
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 24px;
-      
+
       animation: floatRandom 15s infinite linear alternate;
     }
     .card::before {
@@ -195,7 +195,7 @@
       align-items: center;
       justify-content: center;
       background: rgba(9,9,11,0.95);
-      
+
       position: relative;
       overflow-y: auto;
     }
@@ -256,8 +256,8 @@
     .btn-social:hover {
       background: rgba(255,255,255,0.08);
       border-color: rgba(79,142,247,0.35);
-      
-      
+
+
     }
     .btn-social:active { transform: scale(0.97); opacity: 0.85; }
     .btn-submit {
@@ -276,7 +276,7 @@
       justify-content: center;
       gap: 10px;
       transition: all 0.3s;
-      
+
     }
     .btn-submit:hover { background: #f3f4f6;   }
     .btn-submit:active { transform: scale(0.98); }
@@ -310,7 +310,7 @@
     .f-input:focus {
       border-color: var(--accent);
       background: rgba(0,0,0,0.5);
-      
+
     }
     .f-input::placeholder { color: var(--text3); }
     .toggle-text {
@@ -406,13 +406,32 @@
     .card-inner span { font-size:11px; font-weight:700; color:rgba(255,255,255,0.5); letter-spacing:1px; text-transform:uppercase; }
     .card-live { width:7px; height:7px; border-radius:50%; background:#10b981; position:absolute; top:12px; left:12px;  animation:livePulse 2s infinite; }
     @keyframes livePulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
-  .wavy-divider { pointer-events: none; }
+  .login-brand { background: radial-gradient(80% 70% at 80% 20%, rgba(139,92,246,.16), transparent 64%), radial-gradient(55% 65% at 25% 80%, rgba(255,255,255,.065), transparent 68%), #070707; }
+  .login-brand::before { background: linear-gradient(120deg, rgba(0,0,0,.1), rgba(0,0,0,.55)); }
+  .login-brand::after { opacity: .45; }
+  .login-form-panel { width: min(540px, 42vw); background: radial-gradient(circle at 25% 8%, rgba(255,255,255,.055), transparent 32%), #0a0a0b; }
+  .login-form-inner { max-width: 420px; padding: 52px 38px; }
+  .brand-logo { width: 92px; height: 92px; border-radius: 30px; background: rgba(255,255,255,.055); box-shadow: 0 20px 70px rgba(0,0,0,.36), inset 0 1px rgba(255,255,255,.18); }
+  .brand-title { letter-spacing: -.045em; }
+  .brand-feature { border-radius: 18px; background: rgba(255,255,255,.028); border-color: rgba(255,255,255,.075); }
+  .brand-feature:hover { transform: translateX(-6px); background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18); }
+  .card { background: rgba(255,255,255,.025); border-color: rgba(255,255,255,.09); box-shadow: 0 20px 60px rgba(0,0,0,.25); }
+  .form-title { font-size: 32px; letter-spacing: -.04em; }
+  .btn-social, .f-input { border-radius: 16px; background: rgba(255,255,255,.035); border-color: rgba(255,255,255,.1); }
+  .btn-social:hover, .f-input:focus { border-color: rgba(255,255,255,.38); background: rgba(255,255,255,.07); box-shadow: 0 0 0 4px rgba(255,255,255,.045); }
+  .btn-submit { border-radius: 16px; box-shadow: 0 12px 30px rgba(255,255,255,.09); }
+  .btn-submit:hover { background: #fff; transform: translateY(-2px); }
+  .wavy-divider { display:none; }
+  body::before { content:''; position:fixed; inset:0; pointer-events:none; z-index:1; opacity:.72; background-image:radial-gradient(circle at 8% 18%, rgba(255,255,255,.9) 0 1px, transparent 1.6px),radial-gradient(circle at 25% 68%, rgba(255,255,255,.65) 0 1px, transparent 1.6px),radial-gradient(circle at 60% 15%, rgba(255,255,255,.6) 0 1px, transparent 1.7px),radial-gradient(circle at 82% 78%, rgba(255,255,255,.7) 0 1px, transparent 1.7px); background-size:260px 220px,340px 300px,420px 340px,300px 270px; transition:opacity .45s ease; }
+  body:has(.f-input:focus)::before { opacity:0; }
+  .wavy-divider path { fill:#0a0a0b; stroke:rgba(255,255,255,.18); stroke-width:.8; }
+  @media (max-width: 900px) { .login-form-panel { width: 100%; } }
     </style>
 </head>
 <body>
-  
+
   <div class="login-split">
-    
+
     <div class="login-brand">
       <div class="floating-cards">
         <div class="card card-1">
@@ -444,8 +463,8 @@
           </div>
         </div>
       </div>
-      
-    <svg class="wavy-divider" viewBox="0 0 50 1000" preserveAspectRatio="none" style="position: absolute; right: 0; top: 0; bottom: 0; width: 60px; height: 100%; z-index: 10; transform: scaleX(-1);">
+
+    <svg class="wavy-divider" viewBox="0 0 50 1000" preserveAspectRatio="none" style="position: absolute; left: 0; top: 0; bottom: 0; width: 64px; height: 100%; z-index: 10;">
       <path d="M50 0 L0 0 Q40 250 0 500 T0 1000 L50 1000 Z" fill="rgba(9,9,11,0.95)" />
     </svg>
 
@@ -454,7 +473,7 @@
           <svg viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:52px;height:52px">
             <rect width="60" height="60" rx="16" fill="url(#loginGrad)"/>
             <text x="50%" y="55%" font-family="Inter, sans-serif" font-size="28" font-weight="900" fill="white" dominant-baseline="middle" text-anchor="middle">SA</text>
-            
+
             <defs>
               <linearGradient id="loginGrad" x1="0" y1="0" x2="60" y2="60">
                 <stop offset="0%" stop-color="#3B82F6"/>
@@ -488,7 +507,7 @@
       </div>
     </div>
 
-    
+
     <div class="login-form-panel">
       <div class="login-form-inner">
         <div class="form-logo-mobile">
@@ -710,7 +729,7 @@
         document.querySelector('.login-form-panel').style.background = 'rgba(9,9,11,0.95)';
       }
     }
-    
+
     auth.onAuthStateChanged(u=>{
       if(u&&localStorage.getItem('ai_logged_in')==='true'&&localStorage.getItem('terms_accepted')==='true'){
         window.location.href='index.html';

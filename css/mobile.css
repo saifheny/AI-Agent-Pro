@@ -16,11 +16,11 @@
     flex-direction: column;
     background-attachment: scroll;
   }
+  .desktop-attach-btn { display: flex !important; }
   #main-nav,
   .nav,
   .header,
   .floating-btn,
-  .desktop-attach-btn,
   .mobile-header {
     display: none !important;
   }
@@ -176,7 +176,7 @@
     .floating-top-controls {
         background: transparent;
         border: none;
-        
+
         backdrop-filter: none;
         margin: 0;
         width: 100%;
@@ -192,7 +192,7 @@
         margin: 0 10px 10px 10px;
         background: rgba(20,20,20,0.85) !important;
         backdrop-filter: blur(30px);
-        
+
         border: 1px solid rgba(255,255,255,0.1) !important;
     }
     .msg-bubble {
