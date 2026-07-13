@@ -2,11 +2,6 @@
 <html lang="ar" dir="rtl">
 
 <head>
-<script>
-  if(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768){
-    window.location.replace('mobile-blocked.html');
-  }
-</script>
   <meta charset="UTF-8">
   <meta name="viewport"
     content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
@@ -75,7 +70,15 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark-dimmed.min.css">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/mobile.css">
-  <link rel="manifest" href="manifest.json">
+  <script>
+    // ملفات PWA وService Worker لا تعمل من file://؛ لا نطلبها حتى لا تظهر أخطاء CORS مضللة.
+    if (location.protocol === 'http:' || location.protocol === 'https:') {
+      const manifest = document.createElement('link');
+      manifest.rel = 'manifest';
+      manifest.href = 'manifest.json';
+      document.head.appendChild(manifest);
+    }
+  </script>
   <link rel="icon" type="image/png" href="ai_avatar.png">
   <link rel="apple-touch-icon" href="ai_avatar.png">
   <style>
@@ -185,72 +188,26 @@
       transition: background 0.15s ease;
     }
   </style>
+  <!-- === SEO & Discoverability (2026) === -->
+  <meta name="description" content="AI Agent Pro - منصة الذكاء الاصطناعي الأقوى والأحدث لعام 2026. تدعم البحث المباشر، الرؤية الحاسوبية، وتوليد الصور والنصوص بأعلى كفاءة.">
+  <meta name="keywords" content="AI, Artificial Intelligence, ChatGPT, Claude, Gemini, DeepSeek, ذكاء اصطناعي, شات جي بي تي, أداة ذكاء اصطناعي, 2026">
+  <meta name="author" content="AI Agent Pro">
+  <meta name="robots" content="index, follow">
 
-<style>
-  #settings-modal .modal {
-    width: 100vw;
-    height: 100vh;
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 0;
-    background: #030303;
-    border: none;
-    display: flex;
-    flex-direction: column;
-  }
-  #settings-modal .modal-header {
-    padding: 24px 32px;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
-    background: #000;
-  }
-  #settings-modal .modal-header h2 {
-    font-size: 24px;
-    font-weight: 800;
-    color: #fff;
-  }
-  #settings-modal .modal-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: 32px;
-    display: flex;
-    gap: 32px;
-    max-width: 1200px;
-    margin: 0 auto;
-    width: 100%;
-  }
-  #settings-modal .settings-sidebar {
-    width: 250px;
-    background: transparent;
-    border-right: 1px solid rgba(255,255,255,0.05);
-  }
-  #settings-modal .settings-content {
-    flex: 1;
-    background: transparent;
-    border: none;
-    padding: 0;
-  }
-  #settings-modal .settings-section {
-    background: #080808;
-    border: 1px solid rgba(255,255,255,0.03);
-    border-radius: 12px;
-    padding: 24px;
-  }
-  #settings-modal .input-group input, #settings-modal select {
-    background: #0a0a0a;
-    border: 1px solid rgba(255,255,255,0.1);
-    color: #fff;
-  }
-  #settings-modal .modal-footer {
-    display: none;
-  }
-</style>
+  <!-- Open Graph / Social Media -->
+  <meta property="og:title" content="AI Agent Pro - مساعدك الذكي 2026">
+  <meta property="og:description" content="تفاعل مع أحدث نماذج الذكاء الاصطناعي مع إمكانيات غير محدودة للبحث المباشر وتحليل الصور والمستندات.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://aiagentpro.com/og-image.png">
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="AI Agent Pro 2026">
+  <meta name="twitter:description" content="أقوى منصة عربية للذكاء الاصطناعي الشامل.">
 
 </head>
 
 <body class="theme-dark idle">
-
-
-
 
   <div class="floating-top-controls mobile-only" id="floating-controls">
     <button type="button" class="float-btn" onclick="Main.newChat()" aria-label="محادثة جديدة" title="محادثة جديدة">
@@ -334,26 +291,26 @@
     </div>
   </nav>
 
-  
+
   <aside class="sidebar collapsed" id="sidebar">
     <div class="sidebar-header desktop-only" style="padding: 16px;">
       <div style="position:relative;">
         <i data-lucide="search" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--text-muted);"></i>
-        <input type="text" placeholder="بحث في التاريخ..." oninput="Main.searchHistory(this.value)" 
+        <input type="text" placeholder="بحث في التاريخ..." oninput="Main.searchHistory(this.value)"
                style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 35px 10px 12px; color:var(--text-primary); font-size:13px; outline:none;">
       </div>
     </div>
 
-    
+
     <div class="sidebar-header mobile-only" style="padding: calc(var(--safe-top) + 16px) 16px 8px 16px; display:flex; flex-direction:column; gap:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
-        
-        <button onclick="UI.toggleSidebar()" class="icon-btn sidebar-no-hover" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:var(--text-primary); background:transparent; border:none; margin:0; padding:0;">
-          <img src="ai_avatar.png" style="width:24px; height:24px; border-radius:50%;">
+
+        <button onclick="UI.toggleSidebar()" class="icon-btn sidebar-no-hover" aria-label="رجوع للمحادثة" style="width:40px; height:40px; display:flex; align-items:center; justify-content:center; color:var(--text-primary); background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.10); border-radius:14px; margin:0; padding:0;">
+          <i data-lucide="arrow-right" style="width:20px;height:20px;"></i>
         </button>
-        
+
         <span id="sidebar-user-name" style="font-weight:700; font-size:16px; color:var(--text-primary);">المستخدم</span>
-        
+
         <div style="display:flex; gap:8px;">
           <button onclick="document.getElementById('mobile-search-container').style.display = document.getElementById('mobile-search-container').style.display === 'none' ? 'block' : 'none';" class="icon-btn sidebar-no-hover" style="width:36px; height:36px; display:flex; align-items:center; justify-content:center; color:var(--text-primary); background:transparent; border:none; margin:0; padding:0;">
             <i data-lucide="search" style="width:20px;height:20px;"></i>
@@ -363,20 +320,50 @@
           </button>
         </div>
       </div>
-      
+
       <div id="mobile-search-container" style="display:none; position:relative;">
         <i data-lucide="search" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); width:14px; height:14px; color:var(--text-muted);"></i>
-        <input type="text" placeholder="بحث في التاريخ..." oninput="Main.searchHistory(this.value)" 
+        <input type="text" placeholder="بحث في التاريخ..." oninput="Main.searchHistory(this.value)"
                style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 35px 10px 12px; color:var(--text-primary); font-size:13px; outline:none;">
       </div>
     </div>
 
-    <div id="chat-list" style="flex:1; overflow-y:auto; padding:10px 0; padding-top: 70px;">
-      
+    <section class="mobile-sidebar-tools" aria-label="الأدوات">
+      <button type="button" class="mobile-tool-card featured" onclick="Main.newChat(); UI.toggleSidebar();">
+        <i data-lucide="plus"></i><span>محادثة جديدة</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="Main.toggleIncognito(); UI.toggleSidebar();">
+        <i data-lucide="ghost"></i><span>محادثة مخفية</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="UI.openTool('general')">
+        <i data-lucide="message-square"></i><span>المحادثات</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="UI.openTool('coding')">
+        <i data-lucide="code-2"></i><span>البرمجة</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="UI.openTool('analyze')">
+        <i data-lucide="bar-chart-2"></i><span>تحليل البيانات</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="UI.openTool('translate')">
+        <i data-lucide="languages"></i><span>الترجمة</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="UI.openTool('creative')">
+        <i data-lucide="sparkles"></i><span>كتابة إبداعية</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="Main.toggleWebSearch(); UI.toggleSidebar();">
+        <i data-lucide="globe-2"></i><span>بحث الويب</span>
+      </button>
+      <button type="button" class="mobile-tool-card" onclick="UI.showModal('settings-modal'); UI.toggleSidebar();">
+        <i data-lucide="settings-2"></i><span>الإعدادات</span>
+      </button>
+    </section>
+
+    <div id="chat-list" style="flex:1; overflow-y:auto; padding:10px 0 140px; padding-top: 70px;">
+
     </div>
 
-    
-    
+
+
     <div class="sidebar-footer">
       <div class="sidebar-user" onclick="UI.showModal('account-modal')" style="cursor:pointer; display:flex; align-items:center; gap:12px; width:100%; padding:10px;">
         <div class="nav-avatar" style="width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg, #6366f1, #a855f7); display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:18px;">U</div>
@@ -596,12 +583,12 @@
             <div class="welcome" id="welcome-screen">
               <div class="welcome-icon"
                 style="background: transparent; border: none; padding: 0; display:flex; justify-content:center; margin-bottom: 24px;">
-                <img src="ai_avatar.png" alt="AI Agent Avatar" style="width: 120px; height: 120px; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); object-fit: cover;">
+                <img src="ai_avatar.png" alt="AI Agent Avatar" style="width: 70px; height: 70px; border-radius: 50%; box-shadow: 0 4px 20px rgba(0,0,0,0.3); object-fit: cover;">
               </div>
               <h1 class="typewriter-text" id="welcome-title">مرحباً بك في AI Agent Pro ✨</h1>
               <p style="animation: fadeIn 1s ease 2.8s both;">المنصة المتكاملة للذكاء الاصطناعي. اسأل، برمج، حلل
                 البيانات، وأنجز مهامك بكفاءة عالية.</p>
-              
+
               <div id="video-downloader-wrapper" style="margin: 20px 0; text-align: center;">
                 <a href="video_downloader.py" download="video_downloader.py" class="btn primary" style="display: inline-flex; align-items: center; gap: 8px; background: rgba(236,72,153,0.2); border: 1px solid rgba(236,72,153,0.5); color: #fff; padding: 10px 20px; border-radius: 20px; text-decoration: none; font-size: 14px; transition: all 0.3s ease;">
                   <i data-lucide="download" style="width: 18px; height: 18px; color: #EC4899;"></i>
@@ -610,7 +597,7 @@
               </div>
 
               <div class="quick-prompts">
-                
+
               </div>
             </div>
           </div>
@@ -620,14 +607,13 @@
           </button>
           <div class="input-wrap">
             <div class="input-box" style="display:flex; flex-direction:column; padding: 4px 0;">
+              <div id="active-modes-container" style="display:none; gap:6px; flex-wrap:wrap; padding: 6px 16px 0;">
+              </div>
               <div class="attachments-preview" id="attachments-preview" style="padding: 0 16px;"></div>
 
-              <div id="active-modes-container" style="display:none; gap:6px; flex-wrap:wrap; padding: 8px 16px 0;">
-              </div>
-
               <div id="chat-input-container" style="padding: 12px 16px; flex:1; display:flex;">
-                <textarea id="chat-input" rows="1" placeholder="اسأل AI Agent Pro..."
-                  style="width:100%; min-height:44px; max-height:250px; resize:none; background:transparent; border:none; color:var(--text); outline:none; font-family:inherit; font-size:15px; padding:0; line-height:1.5;"></textarea>
+            <textarea id="chat-input" dir="auto" rows="1" placeholder="اسأل AI Agent Pro..."
+                  style="width:100%; min-height:24px; max-height:120px; resize:none; background:transparent; border:none; color:var(--text); outline:none; font-family:inherit; font-size:15px; padding:0; line-height:1.5; text-align:start; overflow-y:auto;"></textarea>
               </div>
 
               <div class="input-actions-row" id="input-row-main"
@@ -718,14 +704,14 @@
         </div>
       </div>
   </main>
-  </div> 
+  </div>
   <input type="file" id="file-input" multiple
     accept=".pdf,.txt,.py,.js,.ts,.json,.html,.css,.md,.png,.jpg,.jpeg,.csv,.webp,.svg,audio/*,image/*" hidden
     onchange="Main.handleFiles(this.files); this.value=''">
   <input type="file" id="image-capture-input" accept="image/*" capture="environment" hidden
     onchange="Main.handleFiles(this.files); this.value=''">
-  <div class="modal-overlay" id="settings-modal" style="background: #000; z-index: 999999;" onclick="UI.closeModalOutside(event,'settings-modal')">
-    <div class="modal" style="width:600px; max-width:95%;">
+  <div class="modal-overlay" id="settings-modal" onclick="UI.closeModalOutside(event,'settings-modal')">
+    <div class="modal fullscreen-api-ui">
       <div class="modal-header">
         <div class="modal-title">الإعدادات المتقدمة</div>
         <button onclick="UI.closeModal('settings-modal')" class="icon-btn"><i data-lucide="x"
@@ -1332,27 +1318,27 @@
     </div>
   </div>
   <div class="modal-overlay" id="model-picker-modal" onclick="UI.closeModalOutside(event,'model-picker-modal')">
-    <div class="modal"
-      style="width:700px; max-width:95%; background: var(--bg); border: none; height: auto; min-height: 200px; padding-top: 60px;">
+    <div class="modal">
       <button onclick="UI.closeModal('model-picker-modal')" class="icon-btn close-sidebar-btn"
-        style="position:fixed; top:16px; right:16px; z-index:1001; background:rgba(15,15,15,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;"><i
+        style="position:absolute; top:16px; right:16px; z-index:1001; background:rgba(15,15,15,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;"><i
           data-lucide="x" style="width:22px;height:22px"></i></button>
-      <div style="padding: 16px 24px 0;">
-        <div class="search-box">
-          <i data-lucide="search" class="search-icon"></i>
-          <input type="text" id="model-search-input" placeholder="ابحث عن نموذج، شركة، أو نوع..."
-            oninput="UI.renderModelsModal(this.value)">
+      <div class="model-picker-toolbar">
+        <div>
+          <span class="model-picker-kicker"><i data-lucide="sparkles" style="width:14px;height:14px"></i> نماذج حديثة</span>
+          <h2>اختر النموذج المناسب</h2>
+          <p>اختيارك ثابت حتى تغيّره، والتفكير العميق يُفعّل تلقائياً للمهام المعقدة.</p>
         </div>
+        <div class="model-picker-status"><i data-lucide="brain-circuit" style="width:17px;height:17px"></i> اختيار ذكي</div>
       </div>
       <div class="modal-body" id="dynamic-models-container"
-        style="padding: 16px; display: flex; flex-direction: column; gap: 16px; max-height: calc(100vh - 120px); overflow-y: auto; flex: none;">
+        style="padding: 16px; display: flex; flex-direction: column; gap: 16px; overflow-y: auto; flex: 1 1 auto; min-height: 0;">
       </div>
     </div>
   </div>
   <div class="modal-overlay" id="prompts-modal" onclick="UI.closeModalOutside(event,'prompts-modal')">
     <div class="modal" style="width:700px; max-width:95%;">
       <button onclick="UI.closeModal('prompts-modal')" class="icon-btn close-sidebar-btn"
-        style="position:fixed; top:16px; right:16px; z-index:1001; background:rgba(15,15,15,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;"><i
+        style="position:absolute; top:16px; right:16px; z-index:1001; background:rgba(15,15,15,0.6); backdrop-filter:blur(12px); border:1px solid rgba(255,255,255,0.1); width:40px; height:40px; border-radius:12px; display:flex; align-items:center; justify-content:center;"><i
           data-lucide="x" style="width:20px;height:20px"></i></button>
       <div class="modal-body" id="prompts-container"
         style="padding: 16px; max-height: 100vh; overflow-y: auto; padding-top: 60px;">
@@ -1385,8 +1371,8 @@
         </button>
       </div>
       <div class="modal-body" style="padding:0 20px 40px; background:var(--bg-primary); max-width: 480px; margin: 0 auto; width: 100%;">
-        
-        
+
+
         <div style="text-align:center; margin-bottom:28px; padding-top:8px;">
           <div style="position:relative; width:96px; height:96px; margin:0 auto 16px;">
             <div style="position:absolute; inset:-4px; border-radius:50%; background:linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b); animation: avatarGlow 3s ease-in-out infinite; opacity:0.7;"></div>
@@ -1409,7 +1395,7 @@
           </div>
         </div>
 
-        
+
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:24px;">
           <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:14px; padding:14px 8px; text-align:center;">
             <div style="font-size:20px; font-weight:800; color:var(--text-primary);" id="account-stat-chats">0</div>
@@ -1425,7 +1411,7 @@
           </div>
         </div>
 
-        
+
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; padding:0 8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">المنصة</div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:16px; overflow:hidden; margin-bottom:20px;">
           <div class="settings-row" onclick="UI.closeModal('account-modal'); UI.showModal('settings-modal');"
@@ -1474,7 +1460,7 @@
           </div>
         </div>
 
-        
+
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; padding:0 8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">الحساب</div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:16px; overflow:hidden; margin-bottom:20px;">
           <div class="settings-row"
@@ -1516,7 +1502,7 @@
           </div>
         </div>
 
-        
+
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; padding:0 8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">حول</div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:16px; overflow:hidden; margin-bottom:24px;">
           <div style="padding:14px 16px; display:flex; justify-content:space-between; align-items:center;">
@@ -1530,9 +1516,9 @@
           </div>
         </div>
 
-        
+
         <button id="dynamic-logout-btn"
-          style="background:rgba(59,130,246,0.08); border:1px solid rgba(59,130,246,0.15); border-radius:16px; width:100%; color:#3b82f6; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; padding:16px; font-family:inherit; transition:all 0.2s;"
+          style="background:transparent; border:none; border-radius:16px; width:100%; color:#ef4444; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; padding:16px; font-family:inherit; transition:all 0.2s;"
           onclick="Main.handleLogoutClick()">
           <i data-lucide="log-in" style="width:18px; height:18px;"></i>
           تسجيل الدخول
@@ -1579,7 +1565,7 @@
       </div>
     </div>
   </div>
-  
+
   <div class="modal-overlay" id="logout-modal" onclick="UI.closeModalOutside(event,'logout-modal')">
     <div class="modal" style="width:480px; max-width:95%;">
       <div class="modal-header" style="border:none; text-align:center; display:block; padding:32px 24px 16px;">
@@ -1694,6 +1680,10 @@
     <button id="pwa-install-btn" onclick="UI.triggerPWAInstall()"
       style="background:linear-gradient(135deg, #3B82F6, #2563EB); color:white; border:none; padding:14px 48px; border-radius:16px; font-size:16px; font-weight:700; font-family:'Cairo',sans-serif; cursor:pointer; box-shadow:0 8px 30px rgba(59,130,246,0.4); transition:all 0.3s; display:flex; align-items:center; gap:10px; margin-bottom:16px;">
       <i data-lucide="download" style="width:20px;height:20px"></i> تثبيت الآن
+    </button>
+    <button type="button" onclick="UI.enableInstallReminder()"
+      style="background:transparent; color:#CBD5E1; border:1px solid rgba(255,255,255,.18); padding:10px 18px; border-radius:14px; font-size:13px; font-family:'Cairo',sans-serif; cursor:pointer; margin-bottom:16px;">
+      <i data-lucide="bell-ring" style="width:16px;height:16px;vertical-align:middle"></i> تفعيل تذكير المتصفح
     </button>
     <div id="pwa-install-manual"
       style="display:none; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:20px; max-width:380px; text-align:right; margin-top:8px;">
@@ -1815,9 +1805,9 @@
           </div>
           <i data-lucide="chevron-left" style="width:16px;height:16px;color:var(--text3);opacity:0.5"></i>
         </div>
-      </div> 
-    </div> 
-  </div> 
+      </div>
+    </div>
+  </div>
 
   <script src="https://unpkg.com/lucide@0.469.0/dist/umd/lucide.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
@@ -1832,10 +1822,45 @@
   <script src="js/editor.js"></script>
   <script src="js/main.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && location.protocol !== 'file:') {
       navigator.serviceWorker.register('sw.js').catch(() => { });
     }
   </script>
+
+  <div id="fullscreen-picker" class="fullscreen-picker">
+    <div class="picker-header">
+      <h2>اختيار أداة أو نموذج</h2>
+      <button onclick="document.getElementById('fullscreen-picker').classList.remove('open')" class="icon-btn"><i data-lucide="x"></i></button>
+    </div>
+    <div class="picker-search">
+      <i data-lucide="search"></i>
+      <input type="text" placeholder="ابحث عن أداة أو نموذج..." oninput="UI.filterPicker(this.value)">
+    </div>
+    <div class="picker-body">
+      <div class="picker-section">
+        <h3>الأدوات</h3>
+        <div class="picker-grid">
+          <div class="picker-item" onclick="UI.openTool('general'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="message-square"></i> المحادثة العادية
+          </div>
+          <div class="picker-item" onclick="UI.openTool('web-search'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="globe"></i> البحث في الإنترنت
+          </div>
+          <div class="picker-item" onclick="UI.openTool('creative'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="palette"></i> الإبداع
+          </div>
+          <div class="picker-item" onclick="UI.openTool('coding'); document.getElementById('fullscreen-picker').classList.remove('open')">
+            <i data-lucide="code"></i> البرمجة
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="image-lightbox" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.9); z-index:99999; justify-content:center; align-items:center; flex-direction:column;">
+    <button onclick="document.getElementById('image-lightbox').style.display='none'" style="position:absolute; top:20px; right:20px; background:rgba(255,255,255,0.1); border:none; color:white; width:40px; height:40px; border-radius:50%; cursor:pointer; display:flex; justify-content:center; align-items:center; z-index:2;"><i data-lucide="x"></i></button>
+    <img id="lightbox-img" style="max-width:95vw; max-height:95vh; object-fit:contain; border-radius:8px;">
+  </div>
 </body>
 
 </html>

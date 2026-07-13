@@ -6,6 +6,7 @@ const Main = {
   currentModel: 'free-gpt4o',
   currentMode: 'general',
   isLoading: false,
+  pendingRequests: [],
   totalStorage: 0,
   stats: { msgs: 0, chats: 0, tokens: 0 },
   systemPrompts: {
@@ -15,61 +16,232 @@ const Main = {
     creative: 'أنت مساعد إبداعي للكتابة والأفكار. اقترح نصوصاً وأفكاراً منظمة، جذابة، وقابلة للتنفيذ، مع الحفاظ على وضوح اللغة العربية.',
     analyze: 'أنت محلل بيانات ومعلومات. لخص الأنماط والنتائج المهمة، واذكر الافتراضات بوضوح، وقدّم توصيات عملية مبنية على الأدلة المتاحة.'
   },
+  videoDownloads: {},
+  shouldUseDeepThinking(text) {
+    const value = String(text || '').toLowerCase();
+    const complexSignals = [
+      'حلل', 'تحليل', 'خطة', 'استراتيجية', 'قارن', 'مقارنة', 'استنتج', 'برهن', 'خوارزم',
+      'debug', 'architecture', 'refactor', 'research', 'analyze', 'compare', 'reason', 'proof',
+      'step by step', 'deep', 'complex', 'algorithm', 'security', 'database schema'
+    ];
+    const active = Object.values(this.ALL_MODELS || {})
+      .flatMap(provider => provider.models || [])
+      .find(model => model.id === this.currentModel);
+    return Boolean(
+      active?.reasoning ||
+      this.currentMode === 'analyze' ||
+      this.currentMode === 'code' ||
+      value.length > 550 ||
+      complexSignals.some(signal => value.includes(signal))
+    );
+  },
+  formatMediaTime(seconds) {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    const total = Math.floor(seconds);
+    const minutes = Math.floor(total / 60);
+    const secs = String(total % 60).padStart(2, '0');
+    return `${minutes}:${secs}`;
+  },
+  setMode(mode) {
+    const aliases = { coding: 'code', analysis: 'analyze' };
+    mode = aliases[mode] || mode || 'general';
+    this.currentMode = mode;
+    const labels = {
+      general: ['المحادثة العادية', 'message-square'], 'web-search': ['بحث الإنترنت', 'globe-2'],
+      code: ['البرمجة', 'code-2'], translate: ['الترجمة', 'languages'],
+      analyze: ['التحليل', 'chart-no-axes-combined'], creative: ['الإبداع', 'pen-tool']
+    };
+    const [label, icon] = labels[mode] || labels.general;
+    const container = document.getElementById('active-modes-container');
+    if (container) {
+      container.style.display = mode === 'general' ? 'none' : 'flex';
+      container.innerHTML = mode === 'general' ? '' : `<div class="active-mode-chip mode-${mode}"><i data-lucide="${icon}"></i><span>${label}</span><div onclick="Main.setMode('general')" style="cursor:pointer; display:inline-flex; align-items:center; justify-content:center; padding: 4px; border-radius: 50%;"><i data-lucide="x" class="chip-close"></i></div></div>`;
+    }
+    const webToggle = document.getElementById('web-search-toggle');
+    const webButton = document.getElementById('web-search-btn');
+    if (webToggle) webToggle.checked = mode === 'web-search';
+    if (webButton) webButton.classList.toggle('active', mode === 'web-search');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('nav-' + (mode === 'code' ? 'coding' : mode))?.classList.add('active');
+    const input = document.getElementById('chat-input');
+    if (input) input.placeholder = mode === 'general' ? 'اسأل AI Agent Pro...' : `وضع ${label} مفعّل — اكتب طلبك...`;
+    try { lucide.createIcons(); } catch (e) {}
+  },
+  applyQuickAction(action) {
+    const options = {
+      research: { mode: 'web-search', text: 'ابحث في مصادر موثوقة ومفتوحة عن: ' },
+      brainstorm: { mode: 'creative', text: 'ساعدني على توليد أفكار جديدة حول: ' },
+      analyze: { mode: 'analyze', text: 'حلّل هذا بوضوح مع توصيات عملية: ' },
+      translate: { mode: 'translate', text: 'ترجم النص التالي مع الحفاظ على المعنى والنبرة: ' }
+    };
+    const selected = options[action];
+    if (!selected) return;
+    this.setMode(selected.mode);
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    if (!input.value.trim()) input.value = selected.text;
+    input.focus();
+    input.dispatchEvent(new Event('input'));
+  },
+  getIdentityPrompt() {
+    let modelName = this.currentModel;
+    let providerName = 'the configured provider';
+    let modelMaker = '';
+    for (const [provider, data] of Object.entries(this.ALL_MODELS)) {
+      const model = data.models.find(item => item.id === this.currentModel);
+      if (model) {
+        modelName = model.name;
+        providerName = data.name;
+        modelMaker = ({
+          openai: 'OpenAI', gemini: 'Google', anthropic: 'Anthropic', deepseek: 'DeepSeek',
+          xai: 'xAI', perplexity: 'Perplexity', local: 'the local model publisher', pollinations: 'the model publisher exposed by Pollinations'
+        })[provider] || '';
+        if (provider === 'groq' && model.name.toLowerCase().includes('llama')) modelMaker = 'Meta';
+        if (provider === 'groq' && model.name.toLowerCase().includes('mixtral')) modelMaker = 'Mistral AI';
+        if (provider === 'local' && model.name.toLowerCase().includes('llama')) modelMaker = 'Meta';
+        if (provider === 'local' && model.name.toLowerCase().includes('qwen')) modelMaker = 'Alibaba Cloud';
+        if (provider === 'pollinations' && model.name.toLowerCase().includes('llama')) modelMaker = 'Meta';
+        if (provider === 'pollinations' && model.name.toLowerCase().includes('mistral')) modelMaker = 'Mistral AI';
+        break;
+      }
+    }
+    if (this.currentModel === 'default-pro') {
+      modelName = 'Llama 3.3 70B';
+      modelMaker = 'Meta';
+      providerName = 'Groq';
+    }
+    return `Identity policy: the active model selection is "${modelName}". Its model maker is "${modelMaker || 'the configured model publisher'}" and its serving provider is "${providerName}". If the user asks who created you, who owns the model, or which model is answering, state these facts accurately. Clearly distinguish the model maker and serving provider from AI Agent Pro. AI Agent Pro is the platform/tool affiliated with SA that enables this experience; do not claim SA created a third-party model. Answer this identity question in the same language used by the user.`;
+  },
+  queueMessage() {
+    const input = document.getElementById('chat-input');
+    const text = input?.value.trim() || '';
+    if (!text && !this.uploadedFiles.length && !this.pendingVoiceBlob) return false;
+    const webToggle = document.getElementById('web-search-toggle');
+    this.pendingRequests.push({
+      text,
+      files: this.uploadedFiles.map(file => ({ ...file })),
+      voiceBlob: this.pendingVoiceBlob || null,
+      mode: this.currentMode,
+      webSearch: Boolean(webToggle?.checked)
+    });
+    this.uploadedFiles = [];
+    this.pendingVoiceBlob = null;
+    if (input) {
+      input.value = '';
+      input.style.height = 'auto';
+    }
+    this.saveDraft('');
+    this.renderAttachments();
+    UI.toast('تمت إضافة رسالتك إلى قائمة الإرسال', 'info');
+    return true;
+  },
+  setResponseState(isBusy) {
+    this.isLoading = isBusy;
+    document.body.classList.toggle('assistant-busy', isBusy);
+    const sendButton = document.getElementById('send-btn');
+    const input = document.getElementById('chat-input');
+    if (sendButton) {
+      sendButton.disabled = false;
+      sendButton.classList.toggle('is-working', isBusy);
+      sendButton.setAttribute('aria-label', isBusy ? 'Response in progress. Send another message.' : 'Send message');
+    }
+    if (input) {
+      input.disabled = false;
+      if (!isBusy) input.placeholder = 'اكتب هنا... (Enter للإرسال، Shift+Enter لسطر جديد)';
+    }
+  },
+  finishResponse() {
+    this.setResponseState(false);
+    const next = this.pendingRequests.shift();
+    if (!next) return;
+    const input = document.getElementById('chat-input');
+    const webToggle = document.getElementById('web-search-toggle');
+    this.uploadedFiles = next.files;
+    this.pendingVoiceBlob = next.voiceBlob;
+    this.setMode(next.mode);
+    if (webToggle) webToggle.checked = next.webSearch;
+    document.getElementById('web-search-btn')?.classList.toggle('active', next.webSearch);
+    if (input) {
+      input.value = next.text;
+      input.dispatchEvent(new Event('input'));
+    }
+    this.renderAttachments();
+    window.setTimeout(() => this.sendMessage(), 0);
+  },
+  getDraftKey() {
+    return this.currentChatId ? `ai_agent_draft_${this.currentChatId}` : null;
+  },
+  saveDraft(value) {
+    const key = this.getDraftKey();
+    if (!key || this.isIncognito) return;
+    if (value.trim()) localStorage.setItem(key, value);
+    else localStorage.removeItem(key);
+  },
+  restoreDraft() {
+    const input = document.getElementById('chat-input');
+    const key = this.getDraftKey();
+    if (!input || !key || this.isIncognito) return;
+    const draft = localStorage.getItem(key);
+    if (!draft) return;
+    input.value = draft;
+    input.dispatchEvent(new Event('input'));
+  },
   ALL_MODELS: {
     openai: {
       name: 'OpenAI', icon: 'sparkles', color: 'var(--text)', bg: 'rgba(255,255,255,0.1)', url: 'https://api.openai.com/v1',
       models: [
-        { id: 'gpt-5.5-pro', name: 'GPT-5.5 Pro', actualId: 'gpt-5.5-pro', desc: 'الأحدث - Agent-First', isFree: false },
-        { id: 'gpt-4.5', name: 'GPT-4.5', actualId: 'gpt-4.5', desc: 'تفكير متقدم جداً', isFree: false },
-        { id: 'o1-preview', name: 'O1 Preview', actualId: 'o1-preview', desc: 'منطق وبرمجة متطورة', isFree: false },
-        { id: 'gpt-4o', name: 'GPT-4o', actualId: 'gpt-4o', desc: 'كفاءة مجربة وموثوقة', isFree: true },
-        { id: 'gpt-4o-mini', name: 'GPT-4o Mini', actualId: 'gpt-4o-mini', desc: 'أخف وأسرع إصدار', isFree: true }
+        { id: 'gpt-5.4', name: 'GPT-5.4', actualId: 'gpt-5.4', desc: 'تفكير متقدم، وكلاء وأعمال معقدة', reasoning: true },
+        { id: 'gpt-5.3', name: 'GPT-5.3', actualId: 'gpt-5.3', desc: 'إجابات سريعة ودقيقة للمهام اليومية' },
+        { id: 'gpt-5-mini', name: 'GPT-5 mini', actualId: 'gpt-5-mini', desc: 'خفيف وفعّال للمهام المتكررة' },
+        { id: 'gpt-5-nano', name: 'GPT-5 nano', actualId: 'gpt-5-nano', desc: 'أسرع خيار للمهام القصيرة' }
       ]
     },
     gemini: {
       name: 'Google Gemini', icon: 'zap', color: 'var(--accent)', bg: 'rgba(59,130,246,0.1)', url: 'https://generativelanguage.googleapis.com',
       models: [
-        { id: 'gemini-3.1-pro', name: 'Gemini 3.1 Pro', actualId: 'gemini-3.1-pro', desc: 'الأحدث - تفكير تكيّفي 2026', isFree: false },
-        { id: 'gemini-3.1-flash', name: 'Gemini 3.1 Flash', actualId: 'gemini-3.1-flash', desc: 'سرعة خرافية وأداء عالي', isFree: true },
-        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', actualId: 'gemini-2.5-pro', desc: 'مستقر وقوي', isFree: false },
-        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', actualId: 'gemini-2.5-flash', desc: 'أداء متوازن للجميع', isFree: true }
+        { id: 'gemini-3.1-pro-preview', name: 'Gemini 3.1 Pro', actualId: 'gemini-3.1-pro-preview', desc: 'تفكير معقد، برمجة ووكلاء', reasoning: true },
+        { id: 'gemini-3-flash-preview', name: 'Gemini 3 Flash', actualId: 'gemini-3-flash-preview', desc: 'أداء قوي بزمن استجابة منخفض' },
+        { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', actualId: 'gemini-2.5-pro', desc: 'تفكير عميق ومتعدد الوسائط', reasoning: true },
+        { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', actualId: 'gemini-2.5-flash', desc: 'توازن ممتاز بين السرعة والجودة' }
       ]
     },
     anthropic: {
       name: 'Anthropic Claude', icon: 'book', color: 'var(--yellow)', bg: 'rgba(245,158,11,0.1)', url: 'https://api.anthropic.com/v1/messages',
       models: [
-        { id: 'claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', actualId: 'claude-3-7-sonnet-20250219', desc: 'الأذكى - تحليل عميق', isFree: false },
-        { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', actualId: 'claude-3-5-sonnet-20241022', desc: 'برمجة وتخطيط متقدم', isFree: true },
-        { id: 'claude-3.5-haiku', name: 'Claude 3.5 Haiku', actualId: 'claude-3-5-haiku-20241022', desc: 'سريع واقتصادي', isFree: true }
+        { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', actualId: 'claude-opus-4-6', desc: 'أعلى قدرة للتحليل والتخطيط', reasoning: true },
+        { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', actualId: 'claude-sonnet-4-6', desc: 'برمجة وتخطيط عملي متقدم', reasoning: true },
+        { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', actualId: 'claude-haiku-4-5-20251001', desc: 'استجابات سريعة واقتصادية' }
       ]
     },
     groq: {
       name: 'Meta / Groq', icon: 'box', color: 'var(--red)', bg: 'rgba(239,68,68,0.1)', url: 'https://api.groq.com/openai/v1',
       models: [
-        { id: 'llama-3.3-70b', name: 'Llama 3.3 70B', actualId: 'llama-3.3-70b-versatile', desc: 'مفتوح المصدر وقوي', isFree: true },
-        { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', actualId: 'llama-3.1-8b-instant', desc: 'أسرع استجابة ممكنة', isFree: true },
-        { id: 'llama-vision', name: 'Llama 3.2 Vision', actualId: 'llama-3.2-11b-vision-preview', desc: 'صور ومتعدد الوسائط', isFree: true }
+        { id: 'openai-gpt-oss-120b', name: 'GPT-OSS 120B', actualId: 'openai/gpt-oss-120b', desc: 'استدلال وأدوات وتنفيذ كود', reasoning: true },
+        { id: 'qwen3-32b', name: 'Qwen3 32B', actualId: 'qwen/qwen3-32b', desc: 'تفكير سريع ومناسب للمهام المركبة', reasoning: true },
+        { id: 'llama-3.3-70b', name: 'Llama 3.3 70B', actualId: 'llama-3.3-70b-versatile', desc: 'نموذج عام قوي ومتوازن' },
+        { id: 'llama-3.1-8b', name: 'Llama 3.1 8B', actualId: 'llama-3.1-8b-instant', desc: 'أسرع استجابة ممكنة' }
       ]
     },
     deepseek: {
       name: 'DeepSeek (الصين)', icon: 'cpu', color: '#60A5FA', bg: 'rgba(96,165,250,0.1)', url: 'https://api.deepseek.com',
       models: [
-        { id: 'deepseek-v3', name: 'DeepSeek V3', actualId: 'deepseek-chat', desc: 'الأقوى حالياً في البرمجة والمنطق', isFree: false },
-        { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner', actualId: 'deepseek-reasoner', desc: 'تفكير منطقي متقدم (R1)', isFree: false }
+        { id: 'deepseek-v4-pro', name: 'DeepSeek V4 Pro', actualId: 'deepseek-v4-pro', desc: 'الاستدلال المتقدم والبرمجة', reasoning: true },
+        { id: 'deepseek-v4-flash', name: 'DeepSeek V4 Flash', actualId: 'deepseek-v4-flash', desc: 'سرعة عالية مع نمط تفكير قابل للضبط', reasoning: true }
       ]
     },
     xai: {
       name: 'X.AI Grok (أمريكا)', icon: 'zap', color: '#FFFFFF', bg: 'rgba(255,255,255,0.05)', url: 'https://api.x.ai/v1',
       models: [
-        { id: 'grok-3', name: 'Grok 3', actualId: 'grok-3', desc: 'نموذج إيلون ماسك الأكثر ذكاءً', isFree: false },
-        { id: 'grok-2-vision', name: 'Grok 2 Vision', actualId: 'grok-2-vision-1212', desc: 'فهم صور ومنطق متقدم', isFree: false }
+        { id: 'grok-4-5', name: 'Grok 4.5', actualId: 'grok-4-5', desc: 'مساعد حديث متعدد المهام' },
+        { id: 'grok-420-reasoning', name: 'Grok 4.20 Reasoning', actualId: 'grok-420-reasoning', desc: 'استدلال طويل للمهام المعقدة', reasoning: true }
       ]
     },
     perplexity: {
       name: 'Perplexity (أمريكا)', icon: 'search', color: '#2DD4BF', bg: 'rgba(45,212,191,0.1)', url: 'https://api.perplexity.ai',
       models: [
-        { id: 'sonar-pro', name: 'Sonar Pro', actualId: 'sonar-pro', desc: 'بحث متقدم في الويب بلحظة', isFree: false },
-        { id: 'sonar', name: 'Sonar', actualId: 'sonar', desc: 'إجابات سريعة موثقة', isFree: true }
+        { id: 'sonar-reasoning-pro', name: 'Sonar Reasoning Pro', actualId: 'sonar-reasoning-pro', desc: 'تحليل متعدد الخطوات مع مصادر', reasoning: true },
+        { id: 'sonar-pro', name: 'Sonar Pro', actualId: 'sonar-pro', desc: 'بحث متقدم في الويب', reasoning: false },
+        { id: 'sonar', name: 'Sonar', actualId: 'sonar', desc: 'إجابات سريعة موثقة' }
       ]
     },
     local: {
@@ -79,8 +251,9 @@ const Main = {
       bg: 'rgba(6,182,212,0.12)',
       url: 'http://localhost:11434',
       models: [
-        { id: 'local-llama32', name: 'Llama 3.2', actualId: 'llama3.2', desc: 'ollama pull llama3.2', isFree: true },
-        { id: 'local-qwen', name: 'Qwen 2.5', actualId: 'qwen2.5', desc: 'ollama pull qwen2.5', isFree: true },
+        { id: 'local-qwen3', name: 'Qwen3', actualId: 'qwen3', desc: 'ollama pull qwen3', reasoning: true },
+        { id: 'local-deepseek-r1', name: 'DeepSeek R1', actualId: 'deepseek-r1', desc: 'ollama pull deepseek-r1', reasoning: true },
+        { id: 'local-llama32', name: 'Llama 3.2', actualId: 'llama3.2', desc: 'ollama pull llama3.2' },
         { id: 'local-custom', name: 'نموذج مخصص', actualId: '__custom__', desc: 'اكتب الاسم في الإعدادات', isFree: true }
       ]
     },
@@ -126,6 +299,9 @@ const Main = {
       return;
     }
     this.loadData();
+    this.isLoading = false;
+    this.isIncognito = false;
+    document.body.classList.remove('incognito-mode');
     this.setupIdleLock();
     this.newChat();
     this.setupInput();
@@ -137,16 +313,16 @@ const Main = {
     this.receiveSharedChat();
     if (window.MemoryPlugin) window.MemoryPlugin.init().catch(console.error);
     this.checkVideoDownloaderStatus();
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
+
+
+
     const msgRoot = document.getElementById('messages');
     if (msgRoot) {
       msgRoot.addEventListener('click', (e) => {
@@ -177,7 +353,7 @@ const Main = {
       { text: "قم بمراجعة هذا الكود واكتشاف الأخطاء الأمنية أو البرمجية فيه", title: "مراجعة الكود", icon: "shield-check", cat: "برمجة" },
       { text: "لخص لي كتاب 'العادات الذرية' في 5 نقاط رئيسية قابلة للتطبيق", title: "تلخيص كتب", icon: "book-open", cat: "تعليم" }
     ];
-    
+
     const catColors = {
       'برمجة': { glow: '#60A5FA', bg: 'rgba(96,165,250,0.1)' },
       'إبداعي': { glow: '#F472B6', bg: 'rgba(244,114,182,0.1)' },
@@ -190,7 +366,7 @@ const Main = {
     const day = Math.floor(Date.now() / 86400000);
     const startIdx = (day % 2) * 4;
     const currentPrompts = prompts.slice(startIdx, startIdx + 4);
-    
+
     container.innerHTML = currentPrompts.map(p => {
       const colors = catColors[p.cat] || catColors['تعليم'];
       const safeText = p.text.replace(/'/g, "\\'").replace(/"/g, '&quot;');
@@ -215,12 +391,14 @@ const Main = {
   },
   quickPrompt(text) {
     if (this.isIncognito) {
-      this.toggleIncognito(); 
+      this.toggleIncognito();
     }
     const input = document.getElementById('chat-input');
     if (input) {
       input.value = text;
-      this.sendMessage();
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
     }
   },
   isGuest() {
@@ -263,26 +441,26 @@ const Main = {
       if (!raw) return;
       const u = JSON.parse(raw);
       const isGuest = u.type === 'guest';
-      
+
       const avs = document.querySelectorAll('.nav-avatar');
       if (!isGuest && u.avatar) avs.forEach(av => av.textContent = u.avatar);
-      
+
       const display = document.getElementById('account-avatar-display');
       if (display && u.avatar && !isGuest) display.textContent = u.avatar;
-      
+
       const nameEl = document.getElementById('account-name-edit');
       if (nameEl && !isGuest) nameEl.textContent = u.name || 'المستخدم';
-      
+
       const sidebarNameEl = document.getElementById('sidebar-user-name');
       if (sidebarNameEl) sidebarNameEl.textContent = isGuest ? 'زائر' : (u.name || 'المستخدم');
-      
+
       const email = isGuest ? 'guest@aiagent.pro' : (u.email || u.uid || 'user@example.com');
       const emailTop = document.getElementById('account-email-top');
       const emailBot = document.getElementById('account-email-bot');
       if (emailTop) emailTop.textContent = email;
       if (emailBot) emailBot.textContent = email;
 
-      
+
       const sidebarFooterBtn = document.getElementById('sidebar-profile-btn');
       if (sidebarFooterBtn) {
         if (isGuest) {
@@ -320,7 +498,7 @@ const Main = {
           if (!c || !c.messages) return false;
           if (c.messages.length === 0) {
             emptyCount++;
-            return emptyCount === 1; 
+            return emptyCount === 1;
           }
           return true;
         });
@@ -389,7 +567,7 @@ const Main = {
         if (!a.pinned && b.pinned) return 1;
         return (b.timestamp || 0) - (a.timestamp || 0);
       });
-      localStorage.setItem('ai_chats_pro', JSON.stringify(toSave.slice(0, 100))); 
+      localStorage.setItem('ai_chats_pro', JSON.stringify(toSave.slice(0, 100)));
     }
     localStorage.setItem('ai_stats_pro', JSON.stringify(this.stats));
   },
@@ -410,6 +588,11 @@ const Main = {
   },
   handleFileSelection(file) {
     if (file.type.startsWith('image/')) {
+      const currentImages = this.uploadedFiles.filter(f => f.type.startsWith('image/')).length;
+      if (currentImages >= 4) {
+        UI.toast('عذراً، لا يمكن إرفاق أكثر من 4 صور في المرة الواحدة', 'error');
+        return;
+      }
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -481,33 +664,36 @@ const Main = {
     previewEl.style.display = 'flex';
     previewEl.innerHTML = this.uploadedFiles.map(f => {
       let content = '';
+      let extraStyle = '';
       if (f.isVoice) {
         const mins = Math.floor(f.voiceDuration/60).toString().padStart(2, '0');
         const secs = (f.voiceDuration%60).toString().padStart(2, '0');
+        const bars = Array.from({ length: 30 }, () => `<div class="voice-wave-bar" style="height:${4 + Math.random() * 16}px; background:var(--accent)"></div>`).join('');
         content = `
-          <div class="voice-preview-bubble" style="display:flex;align-items:center;gap:8px;background:var(--bg2);padding:6px 12px;border-radius:20px;width:100%;">
-            <div style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;">
-              <i data-lucide="mic" style="width:14px;height:14px"></i>
-            </div>
-            <span style="font-size:11px;color:var(--text2);flex:1;font-weight:600;">صوت (${mins}:${secs})</span>
+          <div class="voice-message-premium" style="margin:0; background:transparent;">
+            <button class="voice-play-pause" onclick="Main.playAudioMsg(this, '${f.content}')"><i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i></button>
+            <div class="voice-wave-visualizer" onclick="Main.seekAudio(event, this)">${bars}</div>
+            <span class="voice-time" data-duration="${f.voiceDuration}">${mins}:${secs}</span>
           </div>`;
+        extraStyle = 'background: transparent; border: none; padding: 0; min-width: 250px;';
       } else if (f.type.startsWith('image/')) {
         content = `<img src="${f.content}" alt="Attachment" style="width:100%;height:100%;object-fit:cover;border-radius:12px;">`;
+        extraStyle = 'background: transparent; border: none; padding: 0;';
       } else {
         const ext = f.name.split('.').pop().toUpperCase();
         content = `
-          <div class="file-icon" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;">
-            <i data-lucide="file-text" style="width:24px;height:24px;color:var(--text3)"></i>
-            <span style="font-weight:800;font-size:10px;margin-top:4px;">${ext}</span>
-            <span style="font-size:9px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;width:100%;text-align:center;">${this.escHtml(f.name)}</span>
+          <div class="file-icon" style="display:flex;align-items:center;gap:12px;width:100%;height:100%;padding:4px;">
+            <i data-lucide="file" style="width:20px;height:20px;color:var(--text2);flex-shrink:0;"></i>
+            <div style="flex:1;overflow:hidden;">
+              <div style="font-size:12px;font-weight:600;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;color:var(--text);">${f.name}</div>
+              <div style="font-size:10px;color:var(--text3);margin-top:2px;">${(f.size/1024).toFixed(1)} KB</div>
+            </div>
           </div>`;
       }
       return `
-        <div class="attachment-card">
-          <button class="remove-attachment" onclick="Main.removeFile('${f.id}')">
-            <i data-lucide="x" style="width:14px;height:14px"></i>
-          </button>
+        <div class="attachment-item" style="${extraStyle}">
           ${content}
+          <button class="remove-attachment" style="background:rgba(0,0,0,0.5);color:#fff;" onclick="Main.removeFile('${f.id}')"><i data-lucide="x" style="width:14px;height:14px"></i></button>
         </div>
       `;
     }).join('');
@@ -521,13 +707,13 @@ const Main = {
     }
     this.isIncognito = !this.isIncognito;
     const navLogo = document.querySelector('.nav-logo');
-    const ghostBtn = document.querySelector('[aria-label="محادثة مخفية"]');
+    const ghostBtn = document.getElementById('nav-incognito');
     const welcomeIcon = document.querySelector('.welcome-icon');
     if (this.isIncognito) {
       this.currentChatId = 'incognito_' + Date.now();
       this.messages = [];
       document.body.classList.add('incognito-mode');
-      if (navLogo) navLogo.innerHTML = '<i data-lucide="eye-off" style="width:22px;height:22px;color:#fff"></i>';
+      if (navLogo) { navLogo.dataset.originalHtml = navLogo.innerHTML; navLogo.innerHTML = '<i data-lucide="eye-off" style="width:22px;height:22px;color:#fff"></i>'; }
       if (ghostBtn) ghostBtn.style.background = '#fff';
       if (ghostBtn) ghostBtn.style.color = '#000';
       if (welcomeIcon) {
@@ -540,7 +726,7 @@ const Main = {
       UI.toast('وضع المحادثة المخفية — لا يتم حفظ أي شيء', 'info');
     } else {
       document.body.classList.remove('incognito-mode');
-      if (navLogo) navLogo.innerHTML = '<i data-lucide="bot" style="width:22px;height:22px;color:#fff"></i>';
+      if (navLogo && navLogo.dataset.originalHtml) navLogo.innerHTML = navLogo.dataset.originalHtml;
       if (ghostBtn) { ghostBtn.style.background = ''; ghostBtn.style.color = ''; }
       if (welcomeIcon && welcomeIcon.dataset.originalHtml) {
         welcomeIcon.innerHTML = welcomeIcon.dataset.originalHtml;
@@ -571,7 +757,7 @@ const Main = {
       const navLogo = document.querySelector('.nav-logo');
       const ghostBtn = document.getElementById('nav-incognito');
       const welcomeIcon = document.getElementById('welcome-icon-center');
-      if (navLogo) navLogo.innerHTML = '<i data-lucide="bot" style="width:22px;height:22px;color:#fff"></i>';
+      if (navLogo && navLogo.dataset.originalHtml) navLogo.innerHTML = navLogo.dataset.originalHtml;
       if (ghostBtn) { ghostBtn.style.background = ''; ghostBtn.style.color = ''; }
       if (welcomeIcon && welcomeIcon.dataset.originalHtml) {
         welcomeIcon.innerHTML = welcomeIcon.dataset.originalHtml;
@@ -592,10 +778,13 @@ const Main = {
     const ht = document.getElementById('header-title');
     if (ht) ht.textContent = 'مساعد الذكاء الاصطناعي';
     document.getElementById('welcome-screen').style.display = 'flex';
+    const input = document.getElementById('chat-input');
+    if (input) { input.value = ''; input.style.height = 'auto'; }
     this.updateNavUI();
     UI.toast('محادثة جديدة', 'success');
   },
   renameChat(id) {
+    this.closeChatMenus();
     const chat = this.chats.find(c => c.id === id);
     if (!chat) return;
     const newTitle = prompt('أدخل اسم المحادثة الجديد:', chat.title);
@@ -634,9 +823,11 @@ const Main = {
       welcome.style.display = this.messages.length > 0 ? 'none' : 'flex';
     }
     this.updateNavUI();
-    if (window.innerWidth <= 768) UI.toggleSidebar();
+    this.restoreDraft();
+    if (window.innerWidth <= 1023) UI.toggleSidebar();
   },
   pinChat(id) {
+    this.closeChatMenus();
     const chat = this.chats.find(c => c.id === id);
     if (!chat) return;
     const pinnedCount = this.chats.filter(c => c.pinned).length;
@@ -653,18 +844,31 @@ const Main = {
     e.stopPropagation();
     const dropdown = document.getElementById('chat-dropdown-' + id);
     if (!dropdown) return;
-    document.querySelectorAll('.chat-dropdown.show').forEach(d => {
-      if (d.id !== 'chat-dropdown-' + id) d.classList.remove('show');
-    });
-    dropdown.classList.toggle('show');
-    const close = (event) => {
-      if (!dropdown.contains(event.target)) {
-        dropdown.classList.remove('show');
-        document.removeEventListener('click', close);
-      }
+    if (dropdown.parentElement === document.body) {
+      this.closeChatMenus();
+      return;
+    }
+    this.closeChatMenus();
+    const button = document.getElementById('menu-btn-' + id);
+    if (!button) return;
+    const rect = button.getBoundingClientRect();
+    document.body.appendChild(dropdown);
+    dropdown.classList.add('show');
+    dropdown.style.position = 'fixed';
+    dropdown.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - 232))}px`;
+    dropdown.style.top = `${rect.bottom + 8 + 206 > window.innerHeight ? Math.max(8, rect.top - 206) : rect.bottom + 8}px`;
+    dropdown.style.bottom = 'auto';
+    dropdown.setAttribute('aria-hidden', 'false');
+    this._chatMenuCloseHandler = (event) => {
+      if (!dropdown.contains(event.target) && event.target !== button) this.closeChatMenus();
     };
-    if (dropdown.classList.contains('show')) {
-      setTimeout(() => document.addEventListener('click', close), 10);
+    setTimeout(() => document.addEventListener('pointerdown', this._chatMenuCloseHandler, true), 0);
+  },
+  closeChatMenus() {
+    document.querySelectorAll('.chat-dropdown.show, .chat-dropdown[data-menu-portal="true"]').forEach(menu => menu.remove());
+    if (this._chatMenuCloseHandler) {
+      document.removeEventListener('pointerdown', this._chatMenuCloseHandler, true);
+      this._chatMenuCloseHandler = null;
     }
   },
   clearChat() {
@@ -680,6 +884,7 @@ const Main = {
   renderChatList() {
     const list = document.getElementById('chat-list');
     if (!list) return;
+    this.closeChatMenus();
 
     if (!this._initialLoadSimulated && this.chats.length > 0) {
       this._initialLoadSimulated = true;
@@ -719,7 +924,7 @@ const Main = {
     const isSelected = this.selectedChats.includes(c.id) ? 'selected-for-delete' : '';
     const preview = c.messages && c.messages.length ? c.messages[c.messages.length - 1].content.substring(0, 40) + '...' : 'ابدأ محادثة جديدة...';
     const timeAgo = c.timestamp ? this.relativeTime(c.timestamp) : '';
-    
+
     return `
       <div class="chat-item ${isActive} ${isSelected}" onclick="${isMulti ? `Main.toggleChatSelection('${c.id}')` : `Main.loadChat('${c.id}')`}"
            oncontextmenu="event.preventDefault(); Main.toggleMultiSelect('${c.id}')">
@@ -727,26 +932,26 @@ const Main = {
           <div class="chat-item-title">${this.escHtml(c.title)}</div>
           <div class="chat-item-preview">${this.escHtml(preview)}</div>
         </div>
-        
+
         ${!isMulti ? `
         <div class="chat-item-actions">
-          <button class="icon-btn" style="width:24px;height:24px;background:transparent;" onclick="Main.toggleChatMenu(event, '${c.id}')" id="menu-btn-${c.id}">
+          <button type="button" class="icon-btn" style="width:24px;height:24px;background:transparent;" onclick="Main.toggleChatMenu(event, '${c.id}')" id="menu-btn-${c.id}" aria-label="إجراءات المحادثة" aria-haspopup="menu">
             <i data-lucide="more-horizontal" style="width:14px;height:14px"></i>
           </button>
-          
-          <div class="chat-dropdown" id="chat-dropdown-${c.id}">
-            <div class="dropdown-item" onclick="event.stopPropagation(); Main.pinChat('${c.id}')">
+
+          <div class="chat-dropdown" id="chat-dropdown-${c.id}" role="menu">
+            <button type="button" class="dropdown-item" role="menuitem" onclick="event.stopPropagation(); Main.pinChat('${c.id}')">
               <i data-lucide="${c.pinned ? 'pin-off' : 'pin'}" style="width:14px;height:14px"></i>
               ${c.pinned ? 'إلغاء التثبيت' : 'تثبيت في الأعلى'}
-            </div>
-            <div class="dropdown-item" onclick="event.stopPropagation(); Main.renameChat('${c.id}')">
+            </button>
+            <button type="button" class="dropdown-item" role="menuitem" onclick="event.stopPropagation(); Main.renameChat('${c.id}')">
               <i data-lucide="edit-3" style="width:14px;height:14px"></i>
               إعادة تسمية
-            </div>
-            <div class="dropdown-item danger" onclick="event.stopPropagation(); Main.deleteChat('${c.id}')">
+            </button>
+            <button type="button" class="dropdown-item danger" role="menuitem" onclick="event.stopPropagation(); Main.deleteChat('${c.id}')">
               <i data-lucide="trash-2" style="width:14px;height:14px"></i>
               حذف المحادثة
-            </div>
+            </button>
           </div>
         </div>
         ` : ''}
@@ -802,6 +1007,7 @@ const Main = {
     UI.toast(`تم حذف ${count} محادثة`, 'success');
   },
   deleteChat(id) {
+    this.closeChatMenus();
     this.chats = this.chats.filter(c => c.id !== id);
     this.saveData();
     if (this.currentChatId === id) this.newChat();
@@ -858,6 +1064,8 @@ const Main = {
       }
     });
     input.addEventListener('input', () => {
+      const len = input.value.length;
+      this.saveDraft(input.value);
       const oldHeight = input.offsetHeight;
       input.style.height = 'auto';
       const newHeight = Math.min(input.scrollHeight, 200);
@@ -872,9 +1080,9 @@ const Main = {
         charCountEl.textContent = `${len} / 8000`;
         charCountEl.style.color = len > 7500 ? 'var(--red)' : 'var(--text3)';
       }
-      
+
       document.body.classList.add('user-typing');
-      
+
       const incognitoBtn = document.getElementById('nav-incognito');
       const mobileIncogBtn = document.getElementById('mobile-incognito-btn');
       if (input.value.trim() && !this.isIncognito) {
@@ -935,7 +1143,6 @@ const Main = {
     const apiKey = keys[0] || '';
     if (family === 'gemini') {
       apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${actualModelId}:generateContent`;
-      if (apiKey) apiUrl += `?key=${apiKey}`;
     }
     const customUrl = document.getElementById('custom-base-url')?.value || localStorage.getItem('custom_cloud_url');
     if (customUrl && customUrl.trim() !== '') apiUrl = customUrl.trim();
@@ -944,7 +1151,10 @@ const Main = {
   buildAuthHeaders(family, apiKey) {
     const h = { 'Content-Type': 'application/json' };
     if (family === 'local') return h;
-    if (family === 'gemini') return h;
+    if (family === 'gemini') {
+      if (apiKey && String(apiKey).trim()) h['x-goog-api-key'] = String(apiKey).trim();
+      return h;
+    }
     if (family === 'anthropic') {
       h['x-api-key'] = apiKey || '';
       h['anthropic-version'] = '2023-06-01';
@@ -954,7 +1164,7 @@ const Main = {
     if (apiKey && String(apiKey).trim()) h['Authorization'] = `Bearer ${apiKey}`;
     return h;
   },
-  buildRequestBody(family, actualModelId, apiMessages, temp, maxTok) {
+  buildRequestBody(family, actualModelId, apiMessages, temp, maxTok, options = {}) {
     if (family === 'gemini') {
       const systemParts = apiMessages.filter(m => m.role === 'system').map(m => m.content).join('\n');
       const contents = [];
@@ -966,7 +1176,11 @@ const Main = {
       });
       const body = { contents };
       if (systemParts) body.systemInstruction = { parts: [{ text: systemParts }] };
-      body.generationConfig = { temperature: temp || 0.7, maxOutputTokens: maxTok || 4096 };
+      const temperature = actualModelId.startsWith('gemini-3') ? 1.0 : (temp || 0.7);
+      body.generationConfig = { temperature, maxOutputTokens: maxTok || 4096 };
+      if (options.deepThinking && actualModelId.startsWith('gemini-3')) {
+        body.generationConfig.thinkingConfig = { thinkingLevel: 'high' };
+      }
       return body;
     }
     if (family === 'anthropic') {
@@ -977,7 +1191,11 @@ const Main = {
       }));
       return { model: actualModelId, system: systemContent, messages: msgs, max_tokens: maxTok || 4096, temperature: temp || 0.7 };
     }
-    return { model: actualModelId, messages: apiMessages, temperature: temp || 0.7, max_tokens: maxTok || 4096 };
+    const body = { model: actualModelId, messages: apiMessages, temperature: temp || 0.7, max_tokens: maxTok || 4096 };
+    const supportsReasoningEffort = family === 'deepseek' ||
+      (family === 'groq' && /^(openai\/gpt-oss|qwen\/qwen3)/.test(actualModelId));
+    if (options.deepThinking && supportsReasoningEffort) body.reasoning_effort = 'high';
+    return body;
   },
   parseAIResponse(family, data) {
     if (family === 'gemini') {
@@ -1047,7 +1265,7 @@ const Main = {
           time: m.time || null
         })),
         sharedAt: Date.now(),
-        expiresAt: Date.now() + (24 * 60 * 60 * 1000) 
+        expiresAt: Date.now() + (24 * 60 * 60 * 1000)
       };
       await firebaseDB.ref('shared_chats/' + shareId).set(shareData);
       const shareUrl = window.location.origin + window.location.pathname.replace('index.html', '') + 'index.html?share=' + shareId;
@@ -1131,31 +1349,90 @@ const Main = {
     const title = (info && info.title) ? info.title : '';
     const thumb = (info && info.thumbnail) ? info.thumbnail : '';
     const dur = (info && info.duration) ? ` • ${Math.floor(info.duration/60)}:${String(info.duration%60).padStart(2,'0')}` : '';
-    
+    const safeUrl = this.escHtml(wUrl);
+    const encodedUrl = encodeURIComponent(wUrl);
     const embedHtml = thumb ? `<img class="vid-thumb" src="${thumb}" alt="" onerror="this.style.display='none'">` : `<div class="vid-thumb-placeholder">▶️</div>`;
 
     const qualities = ['1080p', '720p', '480p', '360p'];
     const qualityBtns = qualities.map((q, i) =>
-      `<button class="vid-quality-btn${i===1?' active':''}" data-q="${q}" onclick="Main.selectVideoQuality('${wId}', this)">${q}</button>`
+      `<button type="button" class="vid-quality-btn${i===1?' active':''}" data-q="${q}" onclick="Main.selectVideoQuality('${wId}', this)">${q}</button>`
     ).join('');
-    
+
     const actionRow = `
-        <div class="vid-quality-row" id="quality-row-${wId}">${qualityBtns}</div>
-        <div class="vid-action-row">
-          <button class="vid-download-btn primary" onclick="Main.triggerVideoDownload('${wUrl}', 'video', '${wId}')">&#x2B07; تحميل فيديو</button>
-          <button class="vid-download-btn secondary" onclick="Main.triggerVideoDownload('${wUrl}', 'audio', '${wId}')">&#x1F3A7; صوت فقط</button>
-        </div>`;
+      <div class="vid-quality-row" id="quality-row-${wId}">${qualityBtns}</div>
+      <div class="vid-action-row">
+        <button type="button" class="vid-download-btn primary" onclick="Main.triggerVideoDownload(decodeURIComponent('${encodedUrl}'), 'video', '${wId}')"><i data-lucide="download"></i> تحميل فيديو</button>
+        <button type="button" class="vid-download-btn secondary" onclick="Main.triggerVideoDownload(decodeURIComponent('${encodedUrl}'), 'audio', '${wId}')"><i data-lucide="headphones"></i> تحميل صوت</button>
+      </div>`;
 
     return `
       <div class="video-download-widget" id="video-widget-${wId}">
         ${embedHtml}
         <div class="vid-meta">
-          ${title ? `<div class="vid-title">${title}${dur}</div>` : ''}
-          <a class="vid-url-link" href="${wUrl}" target="_blank" rel="noopener">${wUrl}</a>
+          ${title ? `<div class="vid-title">${this.escHtml(title)}${dur}</div>` : ''}
+          <a class="vid-url-link" href="${safeUrl}" target="_blank" rel="noopener">${safeUrl}</a>
           ${actionRow}
         </div>
-        <div id="media-player-${wId}"></div>
       </div>`;
+  },
+  buildDownloadProgress(msgId, type, progress = 0) {
+    const noun = type === 'video' ? 'الفيديو' : 'الصوت';
+    const icon = type === 'video' ? 'video' : 'headphones';
+    return `
+      <div class="download-job-card" id="dl-waves-${msgId}" aria-live="polite">
+        <div class="download-job-icon"><i data-lucide="${icon}"></i></div>
+        <div class="download-job-details">
+          <div class="download-job-title">جارٍ تحميل ${noun}</div>
+          <div class="download-job-subtitle">سيظهر المشغل هنا فور اكتمال الحفظ</div>
+          <div class="download-wave-row" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        </div>
+        <div id="plabel-${msgId}" class="download-job-progress">${Math.round(progress)}%</div>
+      </div>`;
+  },
+  buildDownloadError(message) {
+    return `<div class="download-error"><i data-lucide="circle-alert"></i>${this.escHtml(message)}</div>`;
+  },
+  buildMediaPlayer(msgId, type, file, title = '') {
+    const mediaId = `custom-media-${msgId}`;
+    const playerId = `custom-player-${msgId}`;
+    const mediaUrl = `http://localhost:5000/stream/${encodeURIComponent(file || '')}`;
+    const isVideo = type === 'video';
+    const label = isVideo ? 'مشغل الفيديو الذكي' : 'مشغل الصوت الذكي';
+    const media = isVideo
+      ? `<video id="${mediaId}" src="${mediaUrl}" playsinline preload="metadata" onloadedmetadata="Main.syncMediaPlayer('${msgId}')" ontimeupdate="Main.syncMediaPlayer('${msgId}')" onplay="Main.syncMediaPlayer('${msgId}')" onpause="Main.syncMediaPlayer('${msgId}')" onended="Main.syncMediaPlayer('${msgId}')"></video>`
+      : `<audio id="${mediaId}" src="${mediaUrl}" preload="metadata" onloadedmetadata="Main.syncMediaPlayer('${msgId}')" ontimeupdate="Main.syncMediaPlayer('${msgId}')" onplay="Main.syncMediaPlayer('${msgId}')" onpause="Main.syncMediaPlayer('${msgId}')" onended="Main.syncMediaPlayer('${msgId}')"></audio>`;
+    return `
+      <section class="advanced-media-player ${isVideo ? 'is-video' : 'is-audio'}" id="${playerId}">
+        <div class="avp-header">
+          <span class="avp-brand"><i data-lucide="${isVideo ? 'video' : 'headphones'}"></i>${label}</span>
+          <span class="avp-saved"><i data-lucide="check-circle-2"></i> محفوظ</span>
+        </div>
+        ${isVideo ? `<div class="avp-stage">${media}<div class="avp-video-shade"></div></div>` : `<div class="avp-audio-art"><i data-lucide="audio-lines"></i></div>${media}`}
+        <div class="avp-controls">
+          <button type="button" class="avp-control avp-play" id="avp-play-${msgId}" onclick="Main.toggleCustomPlayer('${msgId}')" aria-label="تشغيل"><i data-lucide="play"></i></button>
+          <span class="avp-time" id="avp-current-${msgId}">0:00</span>
+          <input type="range" class="avp-timeline" id="avp-range-${msgId}" min="0" max="100" value="0" step="0.1" oninput="Main.seekMediaPlayer('${msgId}', this.value)" aria-label="موضع التشغيل">
+          <span class="avp-time" id="avp-total-${msgId}">0:00</span>
+          <button type="button" class="avp-control" onclick="Main.toggleMediaMute('${msgId}')" aria-label="كتم الصوت"><i id="avp-volume-${msgId}" data-lucide="volume-2"></i></button>
+          ${isVideo ? `<button type="button" class="avp-control" onclick="Main.toggleMediaFullscreen('${msgId}')" aria-label="ملء الشاشة"><i data-lucide="maximize"></i></button>` : ''}
+        </div>
+        ${title ? `<div class="avp-title">${this.escHtml(title)}</div>` : ''}
+      </section>`;
+  },
+  getVideoWidgetMessage(msgId, chatId = this.currentChatId) {
+    const chat = this.chats.find(item => item.id === chatId);
+    const messages = chat?.messages || (chatId === this.currentChatId ? this.messages : []);
+    return messages.find(message => message.videoWidgetId === msgId);
+  },
+  failVideoDownload(msgId, chatId, type, message) {
+    const widgetMessage = this.getVideoWidgetMessage(msgId, chatId);
+    if (widgetMessage) widgetMessage.videoDownload = { status: 'error', type, error: message };
+    this.saveData();
+    const widgetContent = document.getElementById('dl-waves-' + msgId)?.closest('.msg-content-wrapper');
+    if (widgetContent) {
+      widgetContent.innerHTML = this.buildDownloadError(message);
+      try { lucide.createIcons(); } catch (e) {}
+    }
   },
   selectVideoQuality(wId, btn) {
     const row = document.getElementById('quality-row-' + wId);
@@ -1175,70 +1452,138 @@ const Main = {
       return;
     }
     const quality = type === 'video' ? this.getSelectedQuality(msgId) : null;
-    const el = document.getElementById('media-player-' + msgId);
-    if (el) el.innerHTML = `
-      <div class="video-progress-bar-wrap">
-        <div class="video-progress-bar-outer"><div class="video-progress-bar-inner" id="pbar-${msgId}" style="width:2%"></div></div>
-        <div class="video-progress-label" id="plabel-${msgId}">جاري التحميل... يرجى الانتظار</div>
-      </div>`;
+    const chatId = this.currentChatId;
+    this.videoDownloads[msgId] = { url, type, quality, chatId };
+    const widgetMessage = this.getVideoWidgetMessage(msgId, chatId);
+    if (widgetMessage) widgetMessage.videoDownload = { status: 'downloading', type, quality };
+    this.saveData();
+
+    const widgetContent = document.getElementById('video-widget-' + msgId)?.closest('.msg-content-wrapper');
+    if (widgetContent) {
+      widgetContent.innerHTML = this.buildDownloadProgress(msgId, type);
+      try { lucide.createIcons(); } catch (e) {}
+    }
     try {
       const res = await fetch('http://localhost:5000/download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, type, quality })
       });
-      if (!res.ok) { UI.toast('فشل بدء التحميل', 'error'); return; }
+      if (!res.ok) {
+        const message = 'فشل بدء التحميل من الخادم المحلي.';
+        this.failVideoDownload(msgId, chatId, type, message);
+        UI.toast(message, 'error');
+        return;
+      }
       const data = await res.json();
       if (data.job_id) {
         this.pollVideoProgress(data.job_id, msgId, type);
       } else {
-        if (el) el.innerHTML = `<div style="color:var(--red);padding:12px">خطأ: ${data.error||'تعذر بدء التحميل'}</div>`;
+        this.failVideoDownload(msgId, chatId, type, `تعذر بدء التحميل: ${data.error || 'خطأ غير معروف'}`);
       }
     } catch (e) {
-      if (el) el.innerHTML = `<div style="color:var(--red);padding:12px">خطأ في الاتصال بالخادم المحلي</div>`;
+      this.failVideoDownload(msgId, chatId, type, 'تعذر الاتصال بخادم التنزيل المحلي.');
     }
   },
   pollVideoProgress(jobId, msgId, type) {
-    const el = document.getElementById('media-player-' + msgId);
-    const pbar = document.getElementById('pbar-' + msgId);
-    const plabel = document.getElementById('plabel-' + msgId);
     const poll = setInterval(async () => {
       try {
         const res = await fetch('http://localhost:5000/progress/' + jobId);
-        if (!res.ok) { clearInterval(poll); return; }
+        if (!res.ok) {
+          clearInterval(poll);
+          const job = this.videoDownloads[msgId] || {};
+          this.failVideoDownload(msgId, job.chatId || this.currentChatId, type, 'تعذر متابعة حالة التنزيل.');
+          return;
+        }
         const data = await res.json();
         if (data.status === 'downloading') {
           const pct = Math.round(data.progress || 0);
-          if (pbar) pbar.style.width = Math.max(pct, 2) + '%';
-          if (plabel) plabel.textContent = `جاري التحميل... ${pct}%`;
+          const plabel2 = document.getElementById('plabel-' + msgId);
+          if (plabel2) plabel2.innerHTML = `جاري التحميل... <span>${pct}%</span>`;
         } else if (data.status === 'completed') {
           clearInterval(poll);
-          if (el) {
-             el.innerHTML = `
-                <div class="video-media-result" style="text-align:center; padding:16px;">
-                  <div style="font-size:24px; margin-bottom:8px;">✅</div>
-                  <div style="color:var(--text); font-weight:600; font-size:14px;">تم التحميل بنجاح!</div>
-                  <div style="color:var(--text3); font-size:12px; margin-top:4px;">تجد الملف في مجلد AI_Agent_Pro_Videos</div>
-                </div>`;
+          const job = this.videoDownloads[msgId] || {};
+          const dl = JSON.parse(localStorage.getItem('vid_dl') || '{}');
+          dl[job.url || ''] = data.file || true;
+          localStorage.setItem('vid_dl', JSON.stringify(dl));
+          const targetChat = this.chats.find(item => item.id === job.chatId);
+          const targetMessages = targetChat?.messages || this.messages;
+          const widgetMessage = targetMessages.find(message => message.videoWidgetId === msgId);
+          if (widgetMessage) {
+            widgetMessage.videoDownload = { status: 'completed', type, file: data.file || '', title: widgetMessage.videoTitle || '' };
           }
+          const sysMsg = { role: 'system', content: `تم تنزيل ${type === 'video' ? 'الفيديو' : 'الصوت'} وحفظه بنجاح في مجلد التنزيلات.`, time: this.now() };
+          targetMessages.push(sysMsg);
+          if (job.chatId === this.currentChatId) {
+            const widgetContent = document.getElementById('dl-waves-' + msgId)?.closest('.msg-content-wrapper');
+            if (widgetContent) widgetContent.innerHTML = this.buildMediaPlayer(msgId, type, data.file || '', widgetMessage?.videoTitle || '');
+            this.appendMessage(sysMsg, true);
+            try { lucide.createIcons(); } catch (e) {}
+          }
+          this.saveData();
         } else if (data.status === 'error') {
           clearInterval(poll);
-          if (el) el.innerHTML = `<div style="color:var(--red);padding:12px">خطأ: ${data.error||'تعذر التحميل'}</div>`;
+          const job = this.videoDownloads[msgId] || {};
+          this.failVideoDownload(msgId, job.chatId || this.currentChatId, type, `تعذر التحميل: ${data.error || 'خطأ غير معروف'}`);
         }
-      } catch (e) { clearInterval(poll); }
+      } catch (e) {
+        clearInterval(poll);
+        const job = this.videoDownloads[msgId] || {};
+        this.failVideoDownload(msgId, job.chatId || this.currentChatId, type, 'انقطع الاتصال بخادم التنزيل المحلي.');
+      }
     }, 1500);
   },
+  toggleCustomPlayer(msgId) {
+    const media = document.getElementById('custom-media-' + msgId);
+    if (!media) return;
+    if (media.paused) media.play().catch(() => {});
+    else media.pause();
+  },
+  syncMediaPlayer(msgId) {
+    const media = document.getElementById('custom-media-' + msgId);
+    if (!media) return;
+    const range = document.getElementById('avp-range-' + msgId);
+    const current = document.getElementById('avp-current-' + msgId);
+    const total = document.getElementById('avp-total-' + msgId);
+    const playButton = document.getElementById('avp-play-' + msgId);
+    if (range && Number.isFinite(media.duration)) {
+      range.max = String(media.duration);
+      range.value = String(media.currentTime);
+    }
+    if (current) current.textContent = this.formatMediaTime(media.currentTime);
+    if (total) total.textContent = this.formatMediaTime(media.duration);
+    if (playButton) {
+      playButton.innerHTML = `<i data-lucide="${media.paused ? 'play' : 'pause'}"></i>`;
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  },
+  seekMediaPlayer(msgId, value) {
+    const media = document.getElementById('custom-media-' + msgId);
+    if (!media || !Number.isFinite(media.duration)) return;
+    media.currentTime = Math.min(media.duration, Math.max(0, Number(value)));
+    this.syncMediaPlayer(msgId);
+  },
+  toggleMediaMute(msgId) {
+    const media = document.getElementById('custom-media-' + msgId);
+    const icon = document.getElementById('avp-volume-' + msgId);
+    if (!media) return;
+    media.muted = !media.muted;
+    if (icon) {
+      icon.setAttribute('data-lucide', media.muted ? 'volume-x' : 'volume-2');
+      try { lucide.createIcons(); } catch (e) {}
+    }
+  },
+  toggleMediaFullscreen(msgId) {
+    const player = document.getElementById('custom-player-' + msgId);
+    if (!player) return;
+    if (document.fullscreenElement) document.exitFullscreen?.();
+    else player.requestFullscreen?.();
+  },
   async handleVideoUrl(url, msgId) {
-    const el = document.getElementById('media-player-' + msgId);
-    
-    
-    
     if (!this.isVideoDownloaderConnected) return;
-
-    if (!el) return;
-    el.innerHTML = '<div style="padding:12px; color:var(--text3)">جاري جلب معلومات الفيديو...</div>';
-    const info = await this.fetchVideoInfo(url);
     const widget = document.getElementById('video-widget-' + msgId);
+    if (!widget) return;
+    const info = await this.fetchVideoInfo(url);
     if (widget && info) {
       const title = info.title || '';
       const thumb = info.thumbnail || '';
@@ -1246,6 +1591,11 @@ const Main = {
       if (title) {
         const titleEl = widget.querySelector('.vid-title');
         if (titleEl) titleEl.textContent = title + dur;
+        const widgetMessage = this.getVideoWidgetMessage(msgId);
+        if (widgetMessage) {
+          widgetMessage.videoTitle = title;
+          this.saveData();
+        }
       }
       if (thumb) {
         const oldThumb = widget.querySelector('.vid-thumb-placeholder');
@@ -1258,37 +1608,48 @@ const Main = {
         }
       }
     }
-    if (el) el.innerHTML = '';
   },
   async sendMessage() {
-    if (this.isLoading) return;
+    if (this.isLoading) {
+      this.queueMessage();
+      return;
+    }
     const input = document.getElementById('chat-input');
     let text = input.value.trim();
+    const userTypedText = text;
     if (!text && !this.uploadedFiles.length && !this.pendingVoiceBlob) return;
-    let displayHtml = text ? this.escHtml(text) : '';
+    let displayHtml = text ? this.linkify(this.escHtml(text)) : '';
     let attachmentsHtml = '';
     let payloadContent = null;
     let hasImages = false;
     if (this.uploadedFiles.length > 0) {
-      hasImages = this.uploadedFiles.some(f => f.type.startsWith('image/'));
+      const images = this.uploadedFiles.filter(f => f.type.startsWith('image/'));
+      hasImages = images.length > 0;
+
+      let imgGridHtml = '';
+      if (images.length > 0) {
+        imgGridHtml = `<div class="image-grid count-${Math.min(images.length, 4)}">`;
+        images.slice(0, 4).forEach(f => {
+          imgGridHtml += `<img src="${f.content}" alt="Attachment" onclick="Main.openLightbox('${f.content}')">`;
+        });
+        imgGridHtml += '</div>';
+      }
+
       this.uploadedFiles.forEach(f => {
         if (f.isVoice) {
           const bars = Array.from({ length: 30 }, () => `<div class="voice-wave-bar" style="height:${4 + Math.random() * 16}px"></div>`).join('');
-          attachmentsHtml += `<div class="voice-message-premium" onclick="Main.playAudioMsg(this, '${f.content}')">
-            <button class="voice-play-pause"><i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i></button>
-            <div class="voice-wave-visualizer">${bars}</div>
-            <span style="font-size:10px;margin-right:8px;opacity:0.7;">${Math.floor(f.voiceDuration/60).toString().padStart(2,'0')}:${(f.voiceDuration%60).toString().padStart(2,'0')}</span>
+          attachmentsHtml += `<div class="voice-message-premium">
+            <button class="voice-play-pause" onclick="Main.playAudioMsg(this, '${f.content}')"><i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i></button>
+            <div class="voice-wave-visualizer" onclick="Main.seekAudio(event, this)">${bars}</div>
+            <span class="voice-time" data-duration="${f.voiceDuration}">${Math.floor(f.voiceDuration/60).toString().padStart(2,'0')}:${(f.voiceDuration%60).toString().padStart(2,'0')}</span>
           </div>`;
-          if (f.voiceTranscript) {
-            text += '\n' + f.voiceTranscript;
-            
-          }
-        } else if (f.type.startsWith('image/')) {
-          attachmentsHtml += `<img src="${f.content}" alt="Attachment" style="width:100%; max-width:300px; border-radius:16px; display:block; margin-bottom:8px;">`;
-        } else {
+          if (f.voiceTranscript) text += '\n' + f.voiceTranscript;
+        } else if (!f.type.startsWith('image/')) {
           attachmentsHtml += `<div class="attachment-chip"><i data-lucide="file" style="width:12px;height:12px"></i> ${this.escHtml(f.name)}</div>`;
         }
       });
+
+      if (imgGridHtml) attachmentsHtml = imgGridHtml + attachmentsHtml;
     }
     if (this.pendingVoiceBlob) {
       this.pendingVoiceBlob = null;
@@ -1296,30 +1657,38 @@ const Main = {
     if (attachmentsHtml) displayHtml = `<div class="msg-attachments-wrap">${attachmentsHtml}</div>` + displayHtml;
     input.value = '';
     input.style.height = 'auto';
+    input.blur();
+    this.saveDraft('');
     document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('attachments-preview').style.display = 'none';
-    const userMsg = { role: 'user', content: text, display: displayHtml, time: this.now() };
+    const hasVoice = this.uploadedFiles.some(f => f.isVoice);
+    const hasImage = this.uploadedFiles.some(f => f.type.startsWith('image/'));
+    const isVoiceOnlyMsg = hasVoice && !hasImage && !userTypedText;
+    const isImageOnlyMsg = hasImage && !hasVoice && !userTypedText;
+    const userMsg = { role: 'user', content: text, display: displayHtml, time: this.now(), isVoiceOnly: isVoiceOnlyMsg, isImageOnly: isImageOnlyMsg, hasMedia: hasVoice || hasImage, files: this.uploadedFiles.map(f => ({ ...f })) };
     this.messages.push(userMsg);
     this.appendMessage(userMsg, true);
     this.updateNavUI();
     if (!this.isIncognito) this.autoTitleChat();
 
-    
+
     if (this.isVideoDownloaderConnected && (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com'))) {
         const msgId = Date.now().toString();
-        const aiMsg = { 
-            role: 'assistant', 
-            content: `لقد اكتشفت رابط فيديو.\n[UI_WIDGET:VIDEO_DOWNLOAD:${msgId}:${text}]`, 
-            time: this.now() 
+        const aiMsg = {
+            role: 'assistant',
+            content: `لقد اكتشفت رابط فيديو.\n[UI_WIDGET:VIDEO_DOWNLOAD:${msgId}:${text}]`,
+            time: this.now(),
+            videoWidgetId: msgId,
+            videoUrl: text
         };
         this.messages.push(aiMsg);
         this.appendMessage(aiMsg, true);
         this.saveData();
         return;
     }
-    
+
     const drawKeywords = ['ارسم ', 'تخيل ', 'صمم ', 'draw ', 'imagine ', 'generate image '];
-    
+
     if (drawKeywords.some(k => text.toLowerCase().startsWith(k)) || text.toLowerCase().trim() === 'ارسم') {
         const userObj = JSON.parse(localStorage.getItem('user') || '{}');
         if (userObj.type === 'guest') {
@@ -1330,15 +1699,15 @@ const Main = {
 
         const prompt = text;
         const imageUrl = `https://pollinations.ai/p/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true`;
-        const aiMsg = { 
-            role: 'assistant', 
-            content: `إليك الصورة التي طلبتها:\n\n![${prompt}](${imageUrl})`, 
-            time: this.now() 
+        const aiMsg = {
+            role: 'assistant',
+            content: `إليك الصورة التي طلبتها:\n\n![${prompt}](${imageUrl})`,
+            time: this.now()
         };
         this.messages.push(aiMsg);
         this.appendMessage(aiMsg, true);
         this.saveData();
-        
+
         input.value = '';
         input.style.height = 'auto';
         if (localStorage.getItem('autoscroll') !== 'false') {
@@ -1349,15 +1718,21 @@ const Main = {
     }
 
     const activeChatId = this.currentChatId;
-    this.isLoading = true;
-    document.getElementById('send-btn').disabled = true;
-    document.getElementById('chat-input').disabled = true;
-    document.getElementById('chat-input').placeholder = 'انتظر حتى يرد المساعد...';
-    const typingUI = this.showTyping();
+    const useDeepThinking = this.shouldUseDeepThinking(text);
+    this.setResponseState(true);
+    const typingUI = this.showTyping({ deepThinking: useDeepThinking });
     try {
-      const apiMessages = [{ role: 'system', content: this.systemPrompts[this.currentMode] || this.systemPrompts['general'] }];
+      const apiMessages = [{ role: 'system', content: `${this.systemPrompts[this.currentMode] || this.systemPrompts['general']}\n\n${this.getIdentityPrompt()}` }];
+      if (useDeepThinking) {
+        apiMessages.push({
+          role: 'system',
+          content: 'This request is complex. Use deliberate internal reasoning, verify assumptions, and return a clear final answer with concise rationale and practical next steps. Do not reveal private chain-of-thought or hidden reasoning tokens.'
+        });
+        const status = typingUI.querySelector('.typing-status-text');
+        if (status) status.textContent = 'جارٍ تحليل المهمة واختيار مستوى التفكير المناسب...';
+      }
       const webToggle = document.getElementById('web-search-toggle');
-      let isWebSearch = (webToggle && webToggle.checked);
+      let isWebSearch = Boolean((webToggle && webToggle.checked) || this.currentMode === 'web-search');
       if (isWebSearch) {
         const taskType = typeof RouterPlugin !== 'undefined' ? await RouterPlugin.analyze(text) : 'general';
         const needsDeepSearch = taskType === 'RESEARCH' || text.toLowerCase().includes('بحث') || text.toLowerCase().includes('search');
@@ -1374,9 +1749,19 @@ const Main = {
               role: 'system',
               content: `--- نتائج البحث المباشر (2026) ---\n${searchContext}\n\nأجب بدقة بناءً على المعلومات أعلاه.`
             });
+          } else {
+            apiMessages.push({ role: 'system', content: 'No reliable live source was returned for this search. Do not infer that an event did not happen. State that verification was unavailable and ask for a more specific query if needed.' });
           }
         } else {
-          UI.toast('سؤال عام؛ تم تجاوز البحث لتوفير الموارد', 'info');
+          typingUI.querySelector('.typing-status-text').textContent = 'جارٍ التحقق من مصادر الإنترنت المفتوحة...';
+          const searchResults = await SearchPlugin.search(text, 'general');
+          const filtered = SearchPlugin.filterResults(searchResults);
+          if (filtered.length > 0) {
+            const searchContext = filtered.map(r => `[المصدر: ${r.source}] ${r.title}\n${r.content}\nرابط: ${r.url}`).join('\n\n');
+            apiMessages.push({ role: 'system', content: `--- مصادر الإنترنت المفتوحة ---\n${searchContext}\n\nاعتمد على هذه المصادر في الإجابة، واذكر اسم المصدر عند تقديم معلومة حديثة.` });
+          } else {
+            apiMessages.push({ role: 'system', content: 'No reliable live source was returned for this search. Do not claim that a current event did not happen without a source.' });
+          }
         }
       }
       if (window.MemoryPlugin) {
@@ -1424,36 +1809,60 @@ const Main = {
             const chat = this.chats.find(c => c.id === activeChatId);
             if (chat) chat.messages.push(noKeyMsg);
         }
-        this.isLoading = false;
-        document.getElementById('send-btn').disabled = false;
+        this.finishResponse();
         return;
       }
-      
+
       let chatMsgs = this.currentChatId === activeChatId ? this.messages : (this.chats.find(c => c.id === activeChatId)?.messages || []);
       apiMessages.push(...chatMsgs.map(m => ({ role: m.role, content: m.content })));
-      
+
       const temp = parseFloat(document.getElementById('temp-slider')?.value) || 0.7;
       const maxTok = parseInt(document.getElementById('max-tokens')?.value) || 4096;
       let aiContent = '';
       if (family === 'local' && window.LocalAIPlugin) {
         aiContent = await LocalAIPlugin.callLocal({ provider: actualModelId.includes('Ollama') ? 'ollama' : 'lmstudio', actualId: actualModelId }, text);
       } else {
-        const reqBody = this.buildRequestBody(family, actualModelId, apiMessages, temp, maxTok);
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers: this.buildAuthHeaders(family, apiKey),
-          body: JSON.stringify(reqBody)
-        });
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `HTTP ${response.status}`);
+        const reqBody = this.buildRequestBody(family, actualModelId, apiMessages, temp, maxTok, { deepThinking: useDeepThinking });
+
+        let response;
+        let retries = 3;
+        while (retries > 0) {
+          try {
+            response = await fetch(apiUrl, {
+              method: 'POST',
+              headers: this.buildAuthHeaders(family, apiKey),
+              body: JSON.stringify(reqBody)
+            });
+            if (response.ok) break;
+            // أخطاء المفتاح أو النموذج أو الصلاحيات لا تتحسن بإعادة الطلب ثلاث مرات.
+            if (response.status !== 429 && response.status < 500) break;
+            if (retries === 1) break;
+          } catch (e) {
+            if (retries === 1) throw e;
+          }
+          retries--;
+          await new Promise(r => setTimeout(r, 1000 * (4 - retries)));
+        }
+
+        if (!response || !response.ok) {
+          let errMessage = `HTTP error!`;
+          if (response) {
+             const errData = await response.json().catch(() => ({}));
+             errMessage = errData.error?.message || `HTTP ${response.status}`;
+             if (family === 'gemini' && response.status === 401) {
+               errMessage = 'مفتاح Gemini غير صالح أو غير مفعّل لمشروع Google AI Studio.';
+             } else if (family === 'gemini' && response.status === 404) {
+               errMessage = `نموذج Gemini "${actualModelId}" غير متاح لهذا المفتاح أو المنطقة.`;
+             }
+          }
+          throw new Error(errMessage);
         }
         const data = await response.json();
         aiContent = this.parseAIResponse(family, data);
       }
       typingUI.remove();
       const aiMsg = { role: 'assistant', content: aiContent, time: this.now() };
-      
+
       if (this.currentChatId === activeChatId) {
           this.messages.push(aiMsg);
           this.appendMessage(aiMsg, true);
@@ -1462,13 +1871,6 @@ const Main = {
           if (chat) chat.messages.push(aiMsg);
       }
 
-      
-      // Auto untoggle web search
-      const webToggleCb = document.getElementById('web-search-toggle');
-      if (webToggleCb && webToggleCb.checked) {
-          webToggleCb.checked = false;
-          document.getElementById('web-search-btn')?.classList.remove('active');
-      }
 
       if (chatMsgs.length === 2 && !this.isIncognito) {
 
@@ -1494,7 +1896,7 @@ const Main = {
           }
           const { apiUrl: rUrl, apiKey: rKey, actualModelId: rModel, family: rFamily } = retryConfig;
           if (rKey || rFamily === 'pollinations') {
-            const retryMsgs = [{ role: 'system', content: this.systemPrompts[this.currentMode] || this.systemPrompts['general'] }];
+            const retryMsgs = [{ role: 'system', content: `${this.systemPrompts[this.currentMode] || this.systemPrompts['general']}\n\n${this.getIdentityPrompt()}` }];
             let chatMsgs = this.currentChatId === activeChatId ? this.messages : (this.chats.find(c => c.id === activeChatId)?.messages || []);
             retryMsgs.push(...chatMsgs.map(m => ({ role: m.role, content: m.content })));
             const rResp = await fetch(rUrl, {
@@ -1507,7 +1909,7 @@ const Main = {
               const rContent = this.parseAIResponse(rFamily, rData);
               retryTyping.remove();
               const aiMsg = { role: 'assistant', content: rContent, time: this.now() };
-              
+
               if (this.currentChatId === activeChatId) {
                   this.messages.push(aiMsg);
                   this.appendMessage(aiMsg, true);
@@ -1515,16 +1917,11 @@ const Main = {
                   const chat = this.chats.find(c => c.id === activeChatId);
                   if (chat) chat.messages.push(aiMsg);
               }
-              
+
               this._retryCount = 0;
               this.uploadedFiles = [];
               this.saveData();
-              this.isLoading = false;
-              document.getElementById('send-btn').disabled = false;
-              if (this.currentChatId === activeChatId) {
-                  document.getElementById('chat-input').disabled = false;
-                  document.getElementById('chat-input').placeholder = 'اسأل AI Agent Pro...';
-              }
+              this.finishResponse();
               return;
             }
           }
@@ -1544,27 +1941,32 @@ const Main = {
     }
     this.uploadedFiles = [];
     this.saveData();
-    this.isLoading = false;
-    document.getElementById('send-btn').disabled = false;
-    if (this.currentChatId === activeChatId) {
-        document.getElementById('chat-input').disabled = false;
-        document.getElementById('chat-input').placeholder = 'اسأل AI Agent Pro...';
-    }
+    this.finishResponse();
   },
   appendMessage(msg, animate) {
     const container = document.getElementById('messages');
     const isUser = msg.role === 'user';
     const div = document.createElement('div');
     div.className = `msg-wrap ${isUser ? 'user' : ''}`;
+    div.dataset.messageIndex = this.messages.indexOf(msg);
     let htmlContent = '';
     if (!isUser && msg.content && msg.content.includes('[UI_WIDGET:VIDEO_DOWNLOAD:')) {
         const match = msg.content.match(/\[UI_WIDGET:VIDEO_DOWNLOAD:([^:]+):(.+?)\]/);
         if (match) {
             const wId = match[1];
             const wUrl = match[2].trim();
-            htmlContent = `<div style="margin-bottom:6px;font-size:13px;color:var(--text2);">اكتشفت رابط فيديو &mdash; اختر ما تريد:</div>` + this.buildVideoWidget(wId, wUrl, null);
-            
-            setTimeout(() => this.handleVideoUrl(wUrl, wId), 300);
+            msg.videoWidgetId = msg.videoWidgetId || wId;
+            msg.videoUrl = msg.videoUrl || wUrl;
+            if (msg.videoDownload?.status === 'completed') {
+              htmlContent = this.buildMediaPlayer(wId, msg.videoDownload.type, msg.videoDownload.file, msg.videoDownload.title || msg.videoTitle || '');
+            } else if (msg.videoDownload?.status === 'downloading') {
+              htmlContent = this.buildDownloadProgress(wId, msg.videoDownload.type);
+            } else if (msg.videoDownload?.status === 'error') {
+              htmlContent = this.buildDownloadError(msg.videoDownload.error || 'تعذر التحميل.');
+            } else {
+              htmlContent = `<div style="margin-bottom:6px;font-size:13px;color:var(--text2);">اكتشفت رابط فيديو &mdash; اختر ما تريد:</div>` + this.buildVideoWidget(wId, wUrl, null);
+              setTimeout(() => this.handleVideoUrl(wUrl, wId), 300);
+            }
         }
     } else if (!isUser && msg.content && msg.content.includes('[UI_WIDGET:API_KEY_REQ:')) {
       const match = msg.content.match(/\[UI_WIDGET:API_KEY_REQ:([^\]]+)\]/);
@@ -1572,16 +1974,16 @@ const Main = {
         let keyName = modelFamily.toUpperCase();
         let placeholder = 'sk-...';
           link = 'https://platform.openai.com/api-keys';
-        if (modelFamily === 'openai') { 
+        if (modelFamily === 'openai') {
           steps = '1. سجل دخولك في <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent)">موقع OpenAI</a><br>2. اضغط على Create new secret key<br>3. انسخ المفتاح والصقه هنا';
           keyName = 'OpenAI (GPT-4)';
           link = 'https://aistudio.google.com/app/apikey';
-        } else if (modelFamily === 'gemini') { 
+        } else if (modelFamily === 'gemini') {
           link = 'https://aistudio.google.com/app/apikey';
           steps = '1. اذهب إلى <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color:var(--accent)">Google AI Studio</a><br>2. اضغط على Create API key<br>3. انسخ المفتاح من المشروع';
           placeholder = 'AIzaSy...';
           link = 'https://console.anthropic.com/settings/keys';
-        } else if (modelFamily === 'anthropic') { 
+        } else if (modelFamily === 'anthropic') {
           steps = '1. افتح <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">منصة Anthropic</a><br>2. قم بتوليد مفتاح جديد والصقه هنا';
           keyName = 'Anthropic Claude';
           link = 'https://console.groq.com/keys';
@@ -1656,7 +2058,7 @@ const Main = {
           });
         }
       }
-      htmlContent = isUser ? (msg.display || this.escHtml(msg.content)) : this.formatAI(msg.content || '');
+      htmlContent = isUser ? (msg.display || this.linkify(this.escHtml(msg.content))) : this.formatAI(msg.content || '');
     }
     let filesHtml = '';
     if (msg.files && msg.files.length && (!isUser || !msg.display)) {
@@ -1666,8 +2068,14 @@ const Main = {
     }
     const safeContent = encodeURIComponent(msg.content || '');
     const copyBtnHtml = !isUser ? `<button class="msg-copy-btn" onclick="Main.copyMessage(decodeURIComponent('${safeContent}'), this)" title="نسخ"><i data-lucide="copy" style="width:14px;height:14px"></i></button>` : '';
-    const isVoiceOnly = isUser && msg.display && msg.display.includes('voice-bubble-premium') && !msg.display.includes('<img');
-    const bubbleClass = isVoiceOnly ? 'msg-bubble user voice-only-bubble' : (isUser ? 'msg-bubble user' : 'msg-bubble ai');
+    const isVoiceOnly = isUser && msg.isVoiceOnly;
+    const isImageOnly = isUser && msg.isImageOnly;
+    const isMediaOnly = isVoiceOnly || isImageOnly || (isUser && msg.hasMedia);
+    const bubbleClass = isMediaOnly ? 'msg-bubble user transparent-bubble' : (isUser ? 'msg-bubble user' : 'msg-bubble ai');
+    const userActionsHtml = `
+          <div class="msg-actions">
+            <button class="msg-action-btn" title="تعديل السؤال" onclick="Main.editMessage(this)"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
+          </div>`;
     div.innerHTML = `
       <div class="msg-avatar ${isUser ? 'user' : 'ai'}">
         ${isUser ? '<i data-lucide="user" style="width:18px;height:18px"></i>' : '<img src="ai_avatar.png" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="AI">'}
@@ -1679,19 +2087,16 @@ const Main = {
           <div class="msg-content-wrapper"></div>
         </div>
         <div class="msg-meta">
+          ${isUser ? '<span class="msg-owner-label"><i data-lucide="user-round"></i> أنت</span>' : '<span class="msg-owner-label ai-owner"><i data-lucide="sparkles"></i> AI Agent Pro</span>'}
           <span class="msg-time">${msg.time}</span>
           ${!isUser ? `
           <div class="msg-actions">
-            <button class="msg-action-btn" title="أعجبني" onclick="UI.toast('شكرًا لتقييمك الإيجابي!', 'success')"><i data-lucide="thumbs-up" style="width:14px;height:14px"></i></button>
-            <button class="msg-action-btn" title="لم يعجبني" onclick="UI.toast('تم تسجيل التقييم لتطوير النظام', 'info')"><i data-lucide="thumbs-down" style="width:14px;height:14px"></i></button>
+            <button class="msg-action-btn like-btn" title="أعجبني" onclick="Main.toggleLike(this)"><i data-lucide="thumbs-up" style="width:14px;height:14px"></i></button>
+            <button class="msg-action-btn dislike-btn" title="لم يعجبني" onclick="Main.toggleDislike(this)"><i data-lucide="thumbs-down" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="نسخ" onclick="Main.copyBubbleText(this)"><i data-lucide="copy" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="قراءة الصوت" onclick="Main.speak(this)"><i data-lucide="volume-2" style="width:14px;height:14px"></i></button>
             <button class="msg-action-btn" title="إعادة التوليد" onclick="Main.regenerate()"><i data-lucide="refresh-cw" style="width:14px;height:14px"></i></button>
-          </div>` : `
-          <div class="msg-actions">
-            <button class="msg-action-btn" title="تعديل السؤال" onclick="Main.editMessage(this)"><i data-lucide="pencil" style="width:14px;height:14px"></i></button>
-          </div>
-          `}
+          </div>` : userActionsHtml}
         </div>
       </div>
     `;
@@ -1704,18 +2109,40 @@ const Main = {
       contentWrapper.innerHTML = htmlContent;
       div.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
     }
-    
+
     if (localStorage.getItem('autoscroll') !== 'false') {
       container.scrollTop = container.scrollHeight;
+    }
+  },
+  toggleLike(btn) {
+    const parent = btn.closest('.msg-actions');
+    const dislikeBtn = parent.querySelector('.dislike-btn');
+    if (btn.classList.contains('active')) {
+      btn.classList.remove('active');
+    } else {
+      btn.classList.add('active');
+      if (dislikeBtn) dislikeBtn.classList.remove('active', 'dislike');
+      UI.toast('شكرًا لتقييمك الإيجابي!', 'success');
+    }
+  },
+  toggleDislike(btn) {
+    const parent = btn.closest('.msg-actions');
+    const likeBtn = parent.querySelector('.like-btn');
+    if (btn.classList.contains('active')) {
+      btn.classList.remove('active', 'dislike');
+    } else {
+      btn.classList.add('active', 'dislike');
+      if (likeBtn) likeBtn.classList.remove('active');
+      UI.toast('تم تسجيل التقييم لتطوير النظام', 'info');
     }
   },
   typeRealisticHTML(element, html) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = html;
-    
+
     const textNodes = [];
     const walk = (node) => {
-      if (node.nodeType === 3) { 
+      if (node.nodeType === 3) {
         if (node.nodeValue.trim() !== '' || node.nodeValue.includes('\\n')) {
           textNodes.push(node);
         }
@@ -1724,21 +2151,21 @@ const Main = {
       }
     };
     walk(tempDiv);
-    
+
     textNodes.forEach(n => {
       n._originalText = n.nodeValue;
-      
+
       n._words = n.nodeValue.split(/(\\s+)/);
       n.nodeValue = '';
     });
-    
+
     element.innerHTML = '';
     element.appendChild(tempDiv);
-    
+
     let nodeIndex = 0;
     let wordIndex = 0;
     const container = document.getElementById('messages');
-    
+
     const type = () => {
       if (nodeIndex >= textNodes.length) {
         element.querySelectorAll('pre code').forEach(el => hljs.highlightElement(el));
@@ -1746,23 +2173,23 @@ const Main = {
       }
       const node = textNodes[nodeIndex];
       const words = node._words;
-      
+
       if (wordIndex < words.length) {
-        let chunk = 2; 
+        let chunk = 2;
         let appended = '';
         for (let i = 0; i < chunk && wordIndex < words.length; i++) {
           appended += words[wordIndex];
           wordIndex++;
         }
         node.nodeValue += appended;
-        
-        
+
+
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
         if (isAtBottom && localStorage.getItem('autoscroll') !== 'false') {
           container.scrollTop = container.scrollHeight;
         }
-        
-        let delay = 10 + Math.random() * 20; 
+
+        let delay = 10 + Math.random() * 20;
         setTimeout(type, delay);
       } else {
         nodeIndex++;
@@ -1775,16 +2202,22 @@ const Main = {
   editMessage(btn) {
     const msgWrap = btn.closest('.msg-wrap');
     if (!msgWrap) return;
-    const contentWrap = msgWrap.querySelector('.msg-content-wrapper');
-    if (contentWrap) {
-      const text = contentWrap.innerText || contentWrap.textContent;
-      const input = document.getElementById('chat-input');
-      input.value = text;
-      input.focus();
-      if (window.innerWidth <= 768) {
-        input.style.height = 'auto';
-        input.style.height = (input.scrollHeight) + 'px';
-      }
+    const index = Number(msgWrap.dataset.messageIndex);
+    const message = this.messages[index];
+    if (!message) return;
+
+    const input = document.getElementById('chat-input');
+    // استخدم محتوى الرسالة الأصلي بدلاً من قراءة واجهة المستخدم لتجنب وقت الصوت
+    input.value = message.content || '';
+
+    if (message.files && message.files.length > 0) {
+      this.uploadedFiles = message.files.map(file => ({ ...file }));
+      this.renderAttachments();
+    }
+    input.focus();
+    if (window.innerWidth <= 768) {
+      input.style.height = 'auto';
+      input.style.height = (input.scrollHeight) + 'px';
     }
   },
   async generateChatTitle(chatId, firstUserMessage) {
@@ -1792,22 +2225,24 @@ const Main = {
       const config = this.getApiConfig();
       if (!config.apiKey && config.family !== 'local' && config.family !== 'pollinations') return;
       const prompt = `اكتب عنواناً قصيراً جداً (من كلمتين إلى 4 كلمات كحد أقصى) يعبر عن هذه الرسالة: "${firstUserMessage}". اكتب العنوان فقط بدون أي إضافات أو اقتباسات.`;
-      
+
       let title = '';
       const response = await fetch(config.apiUrl, {
         method: 'POST',
         headers: this.buildAuthHeaders(config.family, config.apiKey),
-        body: JSON.stringify({
-          model: config.actualModelId,
-          messages: [{ role: 'user', content: prompt }],
-          max_tokens: 20
-        })
+        body: JSON.stringify(this.buildRequestBody(
+          config.family,
+          config.actualModelId,
+          [{ role: 'user', content: prompt }],
+          0.7,
+          20
+        ))
       });
       if (response.ok) {
         const data = await response.json();
         title = this.parseAIResponse(config.family, data);
       }
-      
+
       if (title) {
         title = title.replace(/['"]/g, '').trim();
         const chatListStr = localStorage.getItem('chatList');
@@ -1837,8 +2272,23 @@ const Main = {
       return `<div class="code-container-premium"><div class="code-header-premium"><div class="code-lang-badge"><i data-lucide="${icon}" style="width:14px;height:14px;color:${color}"></i> ${lang}</div><div class="code-actions-premium"><button type="button" class="code-action-btn"><i data-lucide="copy" style="width:12px;height:12px"></i> نسخ</button></div></div><pre><code class="language-${lang}">${this.escHtml(code)}</code></pre></div>`;
     });
     let html = marked.parse(processed);
+
+    // Deep Thinking UI Simulation (Code Sandbox & Logic)
+    if (html.includes('<think>') || (typeof this.currentModel === 'string' && this.currentModel.includes('o1'))) {
+       html = html.replace(/<think>([\s\S]*?)<\/think>/g, '<div class="deep-thinking-block"><div class="dt-header"><i data-lucide="brain"></i> تفكير عميق (Deep Thinking)</div><div class="dt-content">$1</div></div>');
+       // If no think tags but it's an o1 model, simulate one
+       if (!html.includes('deep-thinking-block')) {
+         html = '<div class="deep-thinking-block"><div class="dt-header"><i data-lucide="brain"></i> تفكير عميق...</div><div class="dt-content">جاري التحليل المعقد...</div></div>' + html;
+       }
+    }
+
+    // Sandboxed Code
+    if (html.includes('```')) {
+      html = html.replace(/<button type="button" class="code-action-btn">/g, '<button type="button" class="code-action-btn sandbox-run-btn" onclick="alert(\'جاري تشغيل الكود في الحاوية البرمجية المعزولة...\')"><i data-lucide="play" style="width:12px;height:12px;margin-left:4px;"></i> تشغيل</button><button type="button" class="code-action-btn">');
+    }
+
     html = html.replace(/<a href="([^"]+)"([^>]*)>(.*?)<\/a>/g, (match, url, attrs, content) => {
-      if (content.includes('<div') || content.includes('<i')) return match; 
+      if (content.includes('<div') || content.includes('<i')) return match;
       return `<a href="${url}" ${attrs} class="premium-link-btn">
                 <span>${content}</span>
                 <i data-lucide="external-link" style="width:14px;height:14px;margin-right:8px;opacity:0.8;"></i>
@@ -1853,17 +2303,19 @@ const Main = {
     }
     return html;
   },
-  showTyping() {
+  showTyping(options = {}) {
     const container = document.getElementById('messages');
     const div = document.createElement('div');
+    const deepThinking = Boolean(options.deepThinking);
     div.className = 'msg-wrap';
     div.innerHTML = `
       <div class="msg-avatar ai"><img src="ai_avatar.png" style="width:100%;height:100%;border-radius:50%;object-fit:cover;" alt="AI"></div>
       <div class="msg-body">
-        <div class="typing-indicator">
-          <span style="font-size:13px;color:var(--text3);margin-left:8px;">يفكر...</span>
+        <div class="typing-indicator${deepThinking ? ' deep-thinking-indicator' : ''}">
+          <span class="typing-status-text" style="font-size:13px;color:var(--text3);margin-left:8px;">${deepThinking ? 'يفكر بعمق في المهمة...' : 'يفكر...'}</span>
           <div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>
         </div>
+        ${deepThinking ? '<div class="thinking-progress" aria-label="التفكير العميق"><span></span><span></span><span></span></div>' : ''}
       </div>
     `;
     container.appendChild(div);
@@ -1898,7 +2350,7 @@ const Main = {
       UI.toast(`تم إرفاق الملف: ${file.name}`, 'success');
     });
   },
-  
+
   checkLoginAndUpload() {
     const isGuest = localStorage.getItem('ai_user') === 'guest';
     if (isGuest) {
@@ -1911,7 +2363,7 @@ const Main = {
     const isGuest = localStorage.getItem('ai_user') === 'guest';
     if (isGuest) {
       UI.toast('أنت تستخدم كضيف، قم بإنشاء حساب للوصول لجميع الميزات', 'info');
-      
+
       setTimeout(() => {
         window.location.href = 'login.html';
       }, 2000);
@@ -1925,6 +2377,8 @@ const Main = {
   audioChunks: [],
   pendingVoiceTranscript: '',
   voiceTimerInterval: null,
+  voiceAnimationFrame: null,
+  voicePaused: false,
   voiceSeconds: 0,
   async toggleVoice() {
     const aiUser = localStorage.getItem('ai_user');
@@ -1939,6 +2393,7 @@ const Main = {
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.micStream = stream;
       this.mediaRecorder = new MediaRecorder(stream);
       this.audioChunks = [];
       this.voiceTicks = 0;
@@ -1946,7 +2401,8 @@ const Main = {
       this.analyser = this.audioContext.createAnalyser();
       this.microphone = this.audioContext.createMediaStreamSource(stream);
       this.microphone.connect(this.analyser);
-      this.analyser.fftSize = 64;
+      this.analyser.fftSize = 256;
+      this.analyser.smoothingTimeConstant = 0.82;
       this.dataArray = new Uint8Array(this.analyser.frequencyBinCount);
       this.mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) this.audioChunks.push(e.data);
@@ -1961,6 +2417,7 @@ const Main = {
       };
       this.mediaRecorder.start();
       this.isListening = true;
+      this.voicePaused = false;
       this.pendingVoiceTranscript = '';
       if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1985,20 +2442,27 @@ const Main = {
       if (inputContainer) inputContainer.style.display = 'none';
       document.getElementById('voice-record-ui').style.display = 'flex';
       const waveContainer = document.getElementById('voice-wave-container');
-      waveContainer.innerHTML = Array.from({length: 30}, () => '<div class="voice-wave-bar"></div>').join('');
+      waveContainer.innerHTML = Array.from({length: 34}, () => '<div class="voice-wave-bar"></div>').join('');
+      const animateVoice = () => {
+        if (!this.isListening || !this.analyser) return;
+        this.analyser.getByteFrequencyData(this.dataArray);
+        waveContainer.querySelectorAll('.voice-wave-bar').forEach((bar, i, bars) => {
+          const sample = this.dataArray[Math.min(this.dataArray.length - 1, Math.floor((i / bars.length) * this.dataArray.length * 0.72))] / 255;
+          const edgeFade = 0.64 + 0.36 * Math.sin(Math.PI * (i + 1) / (bars.length + 1));
+          const level = this.voicePaused ? 0 : sample * edgeFade;
+          bar.style.setProperty('height', `${Math.max(3, 3 + level * 42)}px`, 'important');
+          bar.style.setProperty('opacity', `${.28 + Math.min(.72, level * 1.35)}`, 'important');
+        });
+        this.voiceAnimationFrame = requestAnimationFrame(animateVoice);
+      };
+      animateVoice();
       this.voiceTimerInterval = setInterval(() => {
+        if (this.voicePaused) return;
         this.voiceTicks++;
         const totalSeconds = Math.floor(this.voiceTicks / 10);
         const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
         const secs = (totalSeconds % 60).toString().padStart(2, '0');
         document.getElementById('voice-timer').textContent = `${mins}:${secs}`;
-        if (this.analyser && this.dataArray) {
-          this.analyser.getByteFrequencyData(this.dataArray);
-          waveContainer.querySelectorAll('.voice-wave-bar').forEach((bar, i) => {
-            const val = this.dataArray[i % this.dataArray.length];
-            bar.style.height = (4 + (val / 255) * 20) + 'px';
-          });
-        }
       }, 100);
     } catch (e) {
       UI.toast('تعذر الوصول للميكروفون', 'error');
@@ -2007,6 +2471,7 @@ const Main = {
   stopVoice() {
     if (!this.isListening) return;
     this.isListening = false;
+    this.voicePaused = false;
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
     }
@@ -2017,6 +2482,7 @@ const Main = {
       this.audioContext.close();
     }
     clearInterval(this.voiceTimerInterval);
+    cancelAnimationFrame(this.voiceAnimationFrame);
     const btn = document.getElementById('voice-btn');
     if (btn) { btn.style.color = 'var(--text3)'; btn.classList.remove('recording-pulse'); }
     this._restoreInputRow();
@@ -2025,15 +2491,36 @@ const Main = {
     this.stopVoice();
     setTimeout(() => this.sendMessage(), 200);
   },
+  pauseVoice() {
+    if (!this.isListening || !this.mediaRecorder) return;
+    this.voicePaused = !this.voicePaused;
+    const button = document.getElementById('voice-pause-btn');
+    if (this.voicePaused) {
+      if (this.mediaRecorder.state === 'recording') this.mediaRecorder.pause();
+      if (this.audioContext?.state === 'running') this.audioContext.suspend();
+      if (this.recognition) this.recognition.stop();
+      if (button) button.innerHTML = '<i data-lucide="play" style="width:20px;height:20px"></i>';
+    } else {
+      if (this.mediaRecorder.state === 'paused') this.mediaRecorder.resume();
+      if (this.audioContext?.state === 'suspended') this.audioContext.resume();
+      if (this.recognition) { try { this.recognition.start(); } catch (e) {} }
+      if (button) button.innerHTML = '<i data-lucide="pause" style="width:20px;height:20px"></i>';
+    }
+    lucide.createIcons();
+  },
   cancelVoice() {
     if (!this.isListening) return;
     this.isListening = false;
+    this.voicePaused = false;
+
+    // Forcefully stop hardware microphone tracks immediately
+    if (this.micStream) {
+      this.micStream.getTracks().forEach(t => t.stop());
+      this.micStream = null;
+    }
+
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.onstop = () => {
-        if (this.mediaRecorder.stream) {
-          this.mediaRecorder.stream.getTracks().forEach(t => t.stop());
-        }
-      };
+      this.mediaRecorder.onstop = null; // Prevent saving the file
       this.mediaRecorder.stop();
     }
     if (this.recognition) {
@@ -2043,6 +2530,7 @@ const Main = {
       this.audioContext.close();
     }
     clearInterval(this.voiceTimerInterval);
+    cancelAnimationFrame(this.voiceAnimationFrame);
     const btn = document.getElementById('voice-btn');
     if (btn) { btn.style.color = 'var(--text3)'; btn.classList.remove('recording-pulse'); }
     this._restoreInputRow();
@@ -2057,6 +2545,11 @@ const Main = {
     if (voiceUi) voiceUi.style.display = 'none';
   },
   _addVoiceAsAttachment(audioBlob, audioUrl) {
+    const currentVoiceNotes = this.uploadedFiles.filter(f => f.isVoice).length;
+    if (currentVoiceNotes >= 2) {
+      UI.toast('لا يمكن إرفاق أكثر من رسالتين صوتيتين في المرة الواحدة', 'warning');
+      return;
+    }
     const id = 'voice_' + Date.now() + '_' + Math.random().toString(36).substr(2,4);
     const totalSeconds = Math.floor(this.voiceTicks / 10);
     const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
@@ -2098,279 +2591,73 @@ const Main = {
       console.log('Voice transcript ready:', this.pendingVoiceTranscript);
     }
   },
+  openLightbox(url) {
+    const lightbox = document.getElementById('image-lightbox');
+    const img = document.getElementById('lightbox-img');
+    if (lightbox && img) {
+      img.src = url;
+      lightbox.style.display = 'flex';
+      lucide.createIcons();
+    }
+  },
   playVoicePreview(btn) {
     this.playAudioMsg(btn, this.pendingVoiceUrl);
   },
   playAudioMsg(btn, url) {
     if (!url) return;
-    const parent = btn.closest('.voice-message-premium') || btn.closest('.voice-preview-bar');
-    if (this.currentAudio && !this.currentAudio.paused) {
-      this.currentAudio.pause();
-      if (this.currentAudio.src.includes(url) || url.includes(this.currentAudio.src)) {
-        this.currentAudio = null;
-        btn.innerHTML = '<i data-lucide="play" style="width:18px;height:18px"></i>';
-        if (parent) parent.classList.remove('playing');
-        lucide.createIcons();
-        return;
-      }
-      document.querySelectorAll('.voice-message-premium, .voice-preview-bar').forEach(b => {
-        b.classList.remove('playing');
-        const pBtn = b.querySelector('.voice-play-pause, .voice-play-btn');
-        if (pBtn) pBtn.innerHTML = '<i data-lucide="play" style="width:18px;height:18px"></i>';
-      });
-    }
-    this.currentAudio = new Audio(url);
-    this.currentAudio.play();
-    btn.innerHTML = '<i data-lucide="pause" style="width:18px;height:18px"></i>';
-    if (parent) parent.classList.add('playing');
-    lucide.createIcons();
-    this.currentAudio.onended = () => {
-      btn.innerHTML = '<i data-lucide="play" style="width:18px;height:18px"></i>';
-      if (parent) parent.classList.remove('playing');
-      lucide.createIcons();
+    const parent = btn.closest('.voice-message-premium') || btn.closest('.voice-preview-bar') || btn.closest('.attachment-item');
+    const playBtn = btn.classList.contains('voice-play-pause') || btn.classList.contains('voice-play-btn') ? btn : (btn.querySelector('.voice-play-pause') || btn.querySelector('.voice-play-btn') || btn);
+    if (!parent) return;
+    const formatAudioTime = (seconds) => {
+      const value = Math.max(0, Math.floor(seconds || 0));
+      return `${Math.floor(value / 60).toString().padStart(2, '0')}:${(value % 60).toString().padStart(2, '0')}`;
     };
-  },
-  clearVoicePreview() {
-    this.pendingVoiceBlob = null;
-    this.pendingVoiceUrl = null;
-    this.pendingVoiceTranscript = '';
-    const previewArea = document.getElementById('attachments-preview');
-    previewArea.style.display = 'none';
-    previewArea.innerHTML = '';
-  },
-  currentAudio: null,
-  async speak(btnEl) {
-    if (this.currentAudio && !this.currentAudio.paused) {
+    if (this.currentAudio && this.currentAudio !== parent._audio) {
       this.currentAudio.pause();
-      this.currentAudio = null;
-      btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
+      this.currentAudio._owner?.classList.remove('playing');
+      const oldButton = this.currentAudio._owner?.querySelector('.voice-play-pause, .voice-play-btn');
+      if (oldButton) oldButton.innerHTML = '<i data-lucide="play" style="width:16px;height:16px"></i>';
+    }
+    const audio = parent._audio || new Audio(url);
+    parent._audio = audio;
+    audio._owner = parent;
+    const timeLabel = parent.querySelector('.voice-time');
+    const renderProgress = () => {
+      const progress = audio.currentTime / (audio.duration || Number(timeLabel?.dataset.duration) || 1);
+      const bars = parent.querySelectorAll('.voice-wave-bar');
+      const activeCount = Math.floor(progress * bars.length);
+      bars.forEach((bar, index) => bar.style.setProperty('opacity', index <= activeCount ? '1' : '.22', 'important'));
+      if (timeLabel) timeLabel.textContent = `${formatAudioTime(audio.currentTime)} / ${formatAudioTime(audio.duration || Number(timeLabel.dataset.duration))}`;
+    };
+    if (!audio.paused) {
+      audio.pause();
+      parent.classList.remove('playing');
+      playBtn.innerHTML = '<i data-lucide="play" style="width:16px;height:16px"></i>';
       lucide.createIcons();
       return;
     }
-    if (window.speechSynthesis.speaking) {
-      window.speechSynthesis.cancel();
-      btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-      lucide.createIcons();
-      return;
-    }
-    const text = btnEl.closest('.msg-body').querySelector('.msg-bubble').innerText;
-    const elKey = localStorage.getItem('elevenlabs_api_key') || document.getElementById('elevenlabs-key-input')?.value;
-    document.querySelectorAll('.msg-action-btn[title="قراءة الصوت"]').forEach(b => {
-      b.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-    });
-    btnEl.innerHTML = '<i data-lucide="square" style="width:14px;height:14px;color:var(--red)"></i>';
+    this.currentAudio = audio;
+    audio.play();
+    parent.classList.add('playing');
+    playBtn.innerHTML = '<i data-lucide="pause" style="width:16px;height:16px"></i>';
     lucide.createIcons();
-    if (elKey) {
-      UI.toast('جاري تحضير الصوت السينمائي...', 'info');
-      try {
-        const res = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/pFZP5JQG7iQjIQuC4Bku`, {
-          method: 'POST',
-          headers: { 'Accept': 'audio/mpeg', 'xi-api-key': elKey, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: text, model_id: "eleven_multilingual_v2", voice_settings: { stability: 0.5, similarity_boost: 0.5 } })
-        });
-        if (!res.ok) throw new Error('فشل ElevenLabs');
-        const blob = await res.blob();
-        this.currentAudio = new Audio(URL.createObjectURL(blob));
-        this.currentAudio.onended = () => {
-          btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-          lucide.createIcons();
-        };
-        this.currentAudio.play();
-      } catch (err) {
-        UI.toast('خطأ في ElevenLabs، سيتم استخدام النطق العادي', 'error');
-        this.fallbackSpeak(text, btnEl);
-      }
-    } else {
-      this.fallbackSpeak(text, btnEl);
-    }
-  },
-  fallbackSpeak(text, btnEl) {
-    if (this.currentAudio && !this.currentAudio.paused) {
-      this.currentAudio.pause();
-    }
-    const cleanText = text.replace(/[*_#`~[\]]/g, '').trim();
-    const chunks = cleanText.match(/.{1,150}(?:\s|[.،؟!:]|$)/g) || [cleanText];
-    let index = 0;
-    const playNext = () => {
-      if (index >= chunks.length) {
-        if (btnEl) btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-        lucide.createIcons();
-        return;
-      }
-      const url = 'https://translate.google.com/translate_tts?ie=UTF-8&q=' + encodeURIComponent(chunks[index].trim()) + '&tl=ar&client=tw-ob';
-      this.currentAudio = new Audio(url);
-      this.currentAudio.onended = () => {
-        index++;
-        playNext();
-      };
-      this.currentAudio.onerror = () => {
-        const utterance = new SpeechSynthesisUtterance(chunks.slice(index).join(' '));
-        utterance.lang = 'ar-SA';
-        utterance.onend = () => {
-          if (btnEl) btnEl.innerHTML = '<i data-lucide="volume-2" style="width:14px;height:14px"></i>';
-          lucide.createIcons();
-        };
-        window.speechSynthesis.speak(utterance);
-      };
-      this.currentAudio.play().catch(e => {
-         console.error('TTS error:', e);
-         const utterance = new SpeechSynthesisUtterance(chunks.slice(index).join(' '));
-         utterance.lang = 'ar-SA';
-         window.speechSynthesis.speak(utterance);
-      });
+    audio.ontimeupdate = renderProgress;
+    audio.onloadedmetadata = renderProgress;
+    audio.onended = () => {
+      playBtn.innerHTML = '<i data-lucide="play" style="width:16px;height:16px;margin-left:2px;"></i>';
+      parent.classList.remove('playing');
+      parent.querySelectorAll('.voice-wave-bar').forEach(bar => bar.style.setProperty('opacity', '.22', 'important'));
+      if (timeLabel) timeLabel.textContent = `00:00 / ${formatAudioTime(audio.duration)}`;
+      lucide.createIcons();
     };
-    UI.toast('جاري القراءة بصوت احترافي...', 'info');
-    playNext();
   },
-  setMode(mode) {
-    this.currentMode = mode;
-    document.querySelectorAll('.input-tag').forEach(el => el.classList.remove('active'));
-    document.getElementById('tag-' + mode)?.classList.add('active');
-    const sheet = document.getElementById('mobile-tools-sheet');
-    if (sheet) {
-      sheet.querySelectorAll('.tool-item').forEach(el => {
-        const onclick = el.getAttribute('onclick') || '';
-        el.classList.toggle('active', onclick.includes(`setMode('${mode}')`));
-      });
-    }
-    document.querySelectorAll('.tool-card').forEach(el => el.classList.remove('active'));
-    document.getElementById('tool-' + mode)?.classList.add('active');
-    UI.toast(`تم تفعيل وضع: ${mode}`, 'info');
-    this.updateActiveModesUI();
-  },
-  updateActiveModesUI() {
-    const container = document.getElementById('active-modes-container');
-    if (!container) return;
-    let html = '';
-    
-    const webToggle = document.getElementById('web-search-toggle');
-    if (webToggle && webToggle.checked) {
-      html += `<div onclick="Main.toggleWebSearch()" style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); color:#10b981; padding:4px 10px; border-radius:20px; font-size:11px; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all 0.2s;"><i data-lucide="globe" style="width:12px;height:12px"></i> بحث الويب <i data-lucide="x" style="width:12px;height:12px;opacity:0.6"></i></div>`;
-    }
-    
-    if (this.currentMode !== 'general') {
-      const modeNames = {
-        'coding': { name: 'محرر أكواد', icon: 'code-2', color: '#3b82f6' },
-        'analyze': { name: 'تحليل بيانات', icon: 'bar-chart-2', color: '#8b5cf6' },
-        'translate': { name: 'مترجم', icon: 'languages', color: '#ec4899' },
-        'creative': { name: 'كتابة إبداعية', icon: 'pen-tool', color: '#f59e0b' }
-      };
-      const m = modeNames[this.currentMode] || { name: this.currentMode, icon: 'zap', color: 'var(--accent)' };
-      html += `<div onclick="Main.setMode('general')" style="background:${m.color}20; border:1px solid ${m.color}40; color:${m.color}; padding:4px 10px; border-radius:20px; font-size:11px; display:flex; align-items:center; gap:6px; cursor:pointer; transition:all 0.2s;"><i data-lucide="${m.icon}" style="width:12px;height:12px"></i> ${m.name} <i data-lucide="x" style="width:12px;height:12px;opacity:0.6"></i></div>`;
-    }
-    
-    if (html) {
-      container.style.display = 'flex';
-      container.innerHTML = html;
-      lucide.createIcons();
-    } else {
-      container.style.display = 'none';
-      container.innerHTML = '';
-    }
-  },
-  quickPrompt(text) {
-    const input = document.getElementById('chat-input');
-    input.value = text;
-    input.focus();
-    
-    input.dispatchEvent(new Event('input'));
-  },
-  async regenerate() {
-    if (this.messages.length < 2) return;
-    let lastAiIndex = -1;
-    for (let i = this.messages.length - 1; i >= 0; i--) {
-      if (this.messages[i].role === 'assistant') {
-        lastAiIndex = i;
-        break;
-      }
-    }
-    if (lastAiIndex === -1) return;
-    this.messages.splice(lastAiIndex, 1);
-    this.renderMessages();
-    this.isLoading = true;
-    document.getElementById('send-btn').disabled = true;
-    const typingUI = this.showTyping();
-    try {
-      const customSys = document.getElementById('custom-system-prompt').value;
-      let baseSys = customSys || this.systemPrompts[this.currentMode] || this.systemPrompts['general'];
-      const tone = document.getElementById('ai-tone')?.value || 'default';
-      if (tone === 'formal') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة رسمية، احترافية، وموضوعية تماماً.';
-      else if (tone === 'casual') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة ودية وبسيطة.';
-      else if (tone === 'humorous') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة فكاهية لطيفة.';
-      else if (tone === 'academic') baseSys += '\
-**تعليمات إضافية:** يرجى الرد بنبرة أكاديمية دقيقة.';
-      const apiMessages = [{ role: 'system', content: baseSys }, ...this.messages.map(m => ({
-        role: m.role,
-        content: m.payloadContent || m.content
-      }))];
-      const temp = parseFloat(document.getElementById('temp-slider')?.value) || 0.7;
-      const maxTok = parseInt(document.getElementById('max-tokens')?.value) || 4096;
-      const { apiUrl, apiKey, actualModelId, family } = this.getApiConfig();
-      const needsCloudKey = family !== 'local' && family !== 'pollinations';
-      if (needsCloudKey && (!apiKey || apiKey.trim() === '')) {
-        typingUI.remove();
-        const noKeyMsg = { role: 'assistant', content: `[UI_WIDGET:API_KEY_REQ:${family}]`, time: this.now() };
-        this.messages.push(noKeyMsg);
-        this.appendMessage(noKeyMsg, true);
-        this.isLoading = false;
-        document.getElementById('send-btn').disabled = false;
-        return;
-      }
-      let aiContent = '';
-      if (family === 'pollinations') {
-        const fullPrompt = apiMessages.map(m => m.content).join('\n\n');
-        const encodedPrompt = encodeURIComponent(fullPrompt);
-        const url = `${apiUrl}/${encodedPrompt}?model=${actualModelId}&json=false&search=true`;
-        const response = await fetch(url, { method: 'GET' });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        aiContent = await response.text();
-      } else {
-        const chatReqBody = this.buildRequestBody(family, actualModelId, apiMessages, temp, maxTok);
-        const chatRes = await fetch(apiUrl, {
-          method: 'POST',
-          headers: this.buildAuthHeaders(family, apiKey),
-          body: JSON.stringify(chatReqBody)
-        });
-        if (!chatRes.ok) {
-          const errData = await chatRes.json().catch(() => ({}));
-          throw new Error(errData.error?.message || `HTTP Error: ${chatRes.status}`);
-        }
-        const chatData = await chatRes.json();
-        aiContent = this.parseAIResponse(family, chatData);
-        if (chatData.usage && typeof chatData.usage.total_tokens === 'number') {
-          this.stats.tokens += Math.round(chatData.usage.total_tokens / 1000);
-          this.updateStatsUI();
-        }
-      }
-      const aiMsg = { role: 'assistant', content: aiContent, time: this.now() };
-      this.messages.push(aiMsg);
-      typingUI.remove();
-      this.appendMessage(aiMsg, true);
-      this.saveData();
-    } catch (err) {
-      typingUI.remove();
-      UI.toast('حدث خطأ أثناء إعادة التوليد', 'error');
-    }
-    this.isLoading = false;
-    document.getElementById('send-btn').disabled = false;
-  },
-  copyBubbleText(btnEl) {
-    const text = btnEl.closest('.msg-body').querySelector('.msg-bubble').innerText;
-    navigator.clipboard.writeText(text);
-    UI.toast('تم النسخ', 'success');
-  },
-  copyCode(btnEl) {
-    const text = btnEl.closest('.code-container-premium').querySelector('code').innerText;
-    navigator.clipboard.writeText(text);
-    btnEl.innerHTML = '<i data-lucide="check" style="width:12px;height:12px"></i> تم';
-    lucide.createIcons();
-    setTimeout(() => {
-      btnEl.innerHTML = '<i data-lucide="copy" style="width:12px;height:12px"></i> نسخ';
-      lucide.createIcons();
-    }, 2000);
+  seekAudio(event, element) {
+    event.stopPropagation();
+    const parent = element.closest('.voice-message-premium');
+    const audio = parent?._audio;
+    if (!audio?.duration) return;
+    const rect = element.getBoundingClientRect();
+    audio.currentTime = Math.max(0, Math.min(audio.duration, ((event.clientX - rect.left) / rect.width) * audio.duration));
   },
   sendCodeToEditor(btnEl, lang) {
     const code = btnEl.closest('.code-container-premium').querySelector('code').innerText;
@@ -2506,6 +2793,10 @@ ${m.display || m.content}`).join('\
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
     return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
   },
+  linkify(text) {
+    if (!text) return '';
+    return text.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" style="color:#3b82f6; text-decoration:underline; font-weight:bold;">$1</a>');
+  },
   escHtml(s) {
     if (!s) return '';
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -2558,30 +2849,65 @@ ${m.display || m.content}`).join('\
     }, 500);
   },
   setupNetworkMonitor() {
-    let bar = document.getElementById('network-bar');
-    if (!bar) {
-      bar = document.createElement('div');
-      bar.id = 'network-bar';
-      bar.className = 'network-bar';
-      bar.innerHTML = '<i data-lucide="wifi-off" style="width:14px;height:14px;display:inline-block;vertical-align:middle;margin-left:6px"></i> لا يوجد اتصال بالإنترنت';
-      document.body.prepend(bar);
-      lucide.createIcons();
-    }
-    const update = () => {
-      bar.classList.toggle('show', !navigator.onLine);
-    };
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
-    update();
+    // Disabled as per user request.
   },
   recoverInput() {
     const input = document.getElementById('chat-input');
     if (!input) return;
-    const saved = sessionStorage.getItem('draft_input');
-    if (saved) input.value = saved;
-    input.addEventListener('input', () => {
-      sessionStorage.setItem('draft_input', input.value);
-    });
+    sessionStorage.removeItem('draft_input');
+    input.value = '';
+    input.placeholder = 'اسأل AI Agent Pro...';
+  },
+
+  regenerate() {
+    if (!this.messages || this.messages.length < 2) return;
+    let lastUserIndex = -1;
+    for (let i = this.messages.length - 1; i >= 0; i--) {
+      if (this.messages[i].role === 'user') {
+        lastUserIndex = i;
+        break;
+      }
+    }
+    if (lastUserIndex === -1) return;
+
+    const lastUserMsg = this.messages[lastUserIndex];
+    this.messages.splice(lastUserIndex);
+
+    if (this.currentChatId && this.chats) {
+       const chat = this.chats.find(c => c.id === this.currentChatId);
+       if (chat && chat.messages) {
+           chat.messages = [...this.messages];
+       }
+    }
+
+    this.renderChat();
+
+    const input = document.getElementById('chat-input');
+    if (input) input.value = lastUserMsg.content || '';
+
+    if (lastUserMsg.files) {
+      this.uploadedFiles = JSON.parse(JSON.stringify(lastUserMsg.files));
+      this.renderAttachments();
+    }
+
+    this.sendMessage();
+  },
+  setupLayoutObservers() {
+    const composer = document.querySelector('.input-box');
+    if (composer && window.ResizeObserver) {
+      new ResizeObserver(([entry]) => {
+        document.documentElement.style.setProperty('--composer-height', `${Math.ceil(entry.contentRect.height)}px`);
+      }).observe(composer);
+    }
+    if (window.IntersectionObserver) {
+      this.messageObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => entry.target.classList.toggle('message-visible', entry.isIntersecting));
+      }, { root: document.getElementById('messages'), threshold: 0.08 });
+    }
+  },
+  observeMessageMotion() {
+    if (!this.messageObserver) return;
+    document.querySelectorAll('.msg-wrap').forEach(message => this.messageObserver.observe(message));
   },
   logout() {
     UI.showModal('logout-modal');

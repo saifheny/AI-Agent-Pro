@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ai-agent-pro-v4';
+const CACHE_NAME = 'ai-agent-pro-v5';
 const ASSETS = [
   './',
   './index.html',
@@ -39,3 +39,4 @@ self.addEventListener('fetch', e => {
     }).catch(() => caches.match(e.request))
   );
 });
+
