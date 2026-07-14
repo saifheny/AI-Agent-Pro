@@ -8,35 +8,26 @@ Comprehensive fix script for AI Agent Pro.
 """
 import re
 
-# ============================================================
-# 1. FIX style.css
-# ============================================================
 with open(r'c:\Users\hp zbook\Desktop\LM\css\style.css', 'r', encoding='utf-8', errors='replace') as f:
     css = f.read()
 
-# Remove all null bytes and corrupted data from line 4773 onwards
-# Find the last valid closing brace of the @media (max-width: 1023px) block
-# and truncate everything after it
+
 marker = '@media (max-width: 1023px) {\n  .app-layout {\n    flex-direction: column;\n  }\n  .sidebar {\n    position: fixed;\n    top: 16px;\n    bottom: 16px;\n    right: 16px;\n    width: 300px;\n    z-index: 1000;\n  }\n  .sidebar.collapsed {\n    transform: translateX(120%);\n    opacity: 0;\n    pointer-events: none;\n  }\n}'
 
-# Find where corruption starts (null bytes)
 clean_end = css.find('\x00')
 if clean_end > 0:
     css = css[:clean_end].rstrip()
 
-# Also remove any \r\x00 patterns
 css = css.replace('\r\x00', '')
 css = css.replace('\x00', '')
 
-# Remove the entire broken layout section at the bottom and rewrite it
-# Find "/* Layout Wrapper */" and everything after
+
 layout_marker = '/* Layout Wrapper */'
 layout_idx = css.find(layout_marker)
 if layout_idx > 0:
     css = css[:layout_idx].rstrip()
 
-# Remove the old .header block entirely and the .header-title that follows
-# Since user wants NO top bar, we hide .header
+
 old_header = """.header {
   height: var(--header-h);
   display: flex;
@@ -57,10 +48,8 @@ css = css.replace(old_header, """.header {
   display: none !important;
 }""")
 
-# Fix .messages padding - remove any reference to --header-h since header is gone
 css = css.replace('padding-top: calc(var(--header-h) + 16px);', '')
 
-# Fix body - ensure proper height
 css = css.replace(
     """html,
 body {
@@ -85,7 +74,6 @@ body {
 }"""
 )
 
-# Fix .main to be a proper flex child
 css = css.replace(
     """.main {
   flex: 1;
@@ -106,8 +94,6 @@ css = css.replace(
 }"""
 )
 
-# Fix .nav - remove border-left since it's on the right side visually
-# and ensure it takes full height
 css = css.replace(
     """.nav {
   width: var(--nav-w);
@@ -138,7 +124,6 @@ css = css.replace(
 }"""
 )
 
-# Fix .chat-panel to take full height and not clip input
 css = css.replace(
     """.chat-panel {
   flex: 1;
@@ -161,7 +146,6 @@ css = css.replace(
 }"""
 )
 
-# Fix .messages to be scrollable within chat-panel
 css = css.replace(
     """.messages {
   flex: 1;
@@ -190,7 +174,6 @@ css = css.replace(
 }"""
 )
 
-# Fix .search-bar-panel position  
 css = css.replace(
     """.search-bar-panel {
   background: var(--bg1);
@@ -214,7 +197,6 @@ css = css.replace(
 }"""
 )
 
-# Fix .input-wrap to stay at the bottom of chat-panel
 input_wrap_fix = """
 .input-wrap {
   flex-shrink: 0;
@@ -223,11 +205,9 @@ input_wrap_fix = """
 }
 """
 
-# Check if .input-wrap already exists
 if '.input-wrap {' not in css:
     css += '\n' + input_wrap_fix
 
-# Now append the CLEAN layout section
 clean_layout = """
 
 /* ===== Layout Wrapper ===== */
@@ -340,22 +320,17 @@ with open(r'c:\Users\hp zbook\Desktop\LM\css\style.css', 'w', encoding='utf-8') 
 print("[OK] style.css fixed")
 
 
-# ============================================================
-# 2. FIX mobile.css - remove corrupted bytes at the end
-# ============================================================
+
 with open(r'c:\Users\hp zbook\Desktop\LM\css\mobile.css', 'r', encoding='utf-8', errors='replace') as f:
     mobile_css = f.read()
 
-# Remove null bytes
 clean_end = mobile_css.find('\x00')
 if clean_end > 0:
     mobile_css = mobile_css[:clean_end].rstrip()
 mobile_css = mobile_css.replace('\r\x00', '')
 mobile_css = mobile_css.replace('\x00', '')
 
-# Fix the first breakpoint (should already be 1023px from earlier)
-# Make sure .main has proper padding for mobile floating controls
-# Ensure .main doesn't have excessive padding-top
+
 mobile_css = mobile_css.replace(
     '  padding-top: calc(var(--safe-top) + 64px);',
     '  padding-top: calc(var(--safe-top) + 60px);'
@@ -367,13 +342,10 @@ with open(r'c:\Users\hp zbook\Desktop\LM\css\mobile.css', 'w', encoding='utf-8')
 print("[OK] mobile.css fixed")
 
 
-# ============================================================
-# 3. FIX index.html - remove the <nav> element entirely
-# ============================================================
+
 with open(r'c:\Users\hp zbook\Desktop\LM\index.html', 'r', encoding='utf-8') as f:
     html = f.read()
 
-# Remove the entire <nav class="nav" id="main-nav"> ... </nav> block
 nav_start = html.find('<nav class="nav" id="main-nav">')
 nav_end = html.find('</nav>', nav_start)
 if nav_start > 0 and nav_end > nav_start:
@@ -381,10 +353,8 @@ if nav_start > 0 and nav_end > nav_start:
     html = html[:nav_start] + html[nav_end:]
     print("[OK] <nav> removed from index.html")
 
-# Remove the .header div from .chat-panel if it exists
 header_start = html.find('<div class="header">')
 if header_start > 0:
-    # Find the matching closing </div>
     depth = 0
     i = header_start
     while i < len(html):
@@ -398,14 +368,12 @@ if header_start > 0:
                 break
         i += 1
 
-# Make sure floating-top-controls has mobile-only class
 html = html.replace(
     '<div class="floating-top-controls" id="floating-controls">',
     '<div class="floating-top-controls mobile-only" id="floating-controls">'
 )
 
-# Fix the unclosed <div class="float-model"> - it's missing </div>
-# The structure is broken: float-model contains a button that should be a sibling
+
 html = html.replace(
     '''    <div class="float-model" onclick="UI.showModal('model-picker-modal')" title="\u062a\u063a\u064a\u064a\u0631 \u0627\u0644\u0646\u0645\u0648\u0630\u062c">
       <span class="mobile-model-dot"></span>
