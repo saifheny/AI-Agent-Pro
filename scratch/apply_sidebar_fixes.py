@@ -1,32 +1,23 @@
 import re
 
-# ============================================================
-# 1. Update index.html
-# ============================================================
 with open(r'c:\Users\hp zbook\Desktop\LM\index.html', 'r', encoding='utf-8') as f:
     html = f.read()
 
-# 1A. Change New Chat button logic
 html = html.replace('onclick="Main.clearChat()" title="محادثة جديدة" id="nav-new-chat"', 'onclick="Main.newChat()" title="محادثة جديدة" id="nav-new-chat"')
 
-# 1B. Remove Nav Search icon block
 search_nav_block = """      <button class="nav-btn" onclick="UI.toggleSearch()" title="بحث" id="nav-search">
         <i data-lucide="search" style="width:18px;height:18px"></i>
         <span class="tooltip">بحث في الرسائل</span>
       </button>"""
 html = html.replace(search_nav_block, '')
 
-# 1C. Replace Sidebar Header with Dual Mobile/Desktop Layout
-old_header_regex = r'<div class="sidebar-header".*?</div>\s*</div>' # This might not catch everything.
-# Let's extract between <aside...> and <div id="chat-list"
+old_header_regex = r'<div class="sidebar-header".*?</div>\s*</div>'.
 sidebar_start = html.find('<aside class="sidebar"')
 if sidebar_start != -1:
     chat_list_start = html.find('<div id="chat-list"', sidebar_start)
     if chat_list_start != -1:
-        # The section to replace
         old_section = html[sidebar_start:chat_list_start]
         
-        # New structure
         new_header = """<aside class="sidebar" id="sidebar" style="display:flex; flex-direction:column; padding:0; background:#171717;">
     
     <!-- DESKTOP HEADER (Search Only) -->
@@ -75,19 +66,14 @@ if sidebar_start != -1:
 with open(r'c:\Users\hp zbook\Desktop\LM\index.html', 'w', encoding='utf-8') as f:
     f.write(html)
 
-# ============================================================
-# 2. Update style.css
-# ============================================================
 with open(r'c:\Users\hp zbook\Desktop\LM\css\style.css', 'r', encoding='utf-8') as f:
     css = f.read()
 
 css = css.replace('\x00', '')
 
-# Reduce desktop width to 230px
 css = css.replace('width: 280px;', 'width: 230px;')
 css = css.replace('width: 280px !important;', 'width: 230px !important;')
 
-# Apply custom CSS rules
 custom_css = """
 /* Mobile/Desktop Visibility Utils */
 @media (min-width: 1024px) {
@@ -141,18 +127,15 @@ custom_css = """
 if ".mobile-only {" not in css:
     css += custom_css
 else:
-    # Just append it to ensure the latest rules apply
     css += custom_css
 
 with open(r'c:\Users\hp zbook\Desktop\LM\css\style.css', 'w', encoding='utf-8') as f:
     f.write(css)
 
-# Need to update JS rendering logic for chat items to support the new mobile layout
-# since we added a wrapper .chat-item-content in CSS
+
 with open(r'c:\Users\hp zbook\Desktop\LM\js\main.js', 'r', encoding='utf-8') as f:
     js = f.read()
 
-# Modify renderChatItemHtml to wrap title and preview in .chat-item-content
 old_chat_item = """      <div class="chat-item ${isActive} ${isSelected}" onclick="${isMulti ? `Main.toggleChatSelection('${c.id}')` : `Main.loadChat('${c.id}')`}"
            oncontextmenu="event.preventDefault(); Main.toggleMultiSelect('${c.id}')">
         <div class="chat-item-title">${this.escHtml(c.title)}</div>
