@@ -6,20 +6,13 @@ Issues:
 3. Desktop: sidebar not visible (no toggle button after nav removal)
 """
 
-# ============================================================
-# 1. FIX mobile.css - Fix floating controls layout
-# ============================================================
+
 with open(r'c:\Users\hp zbook\Desktop\LM\css\mobile.css', 'r', encoding='utf-8', errors='replace') as f:
     mobile_css = f.read()
 
-# Remove null bytes if any
 mobile_css = mobile_css.replace('\x00', '')
 
-# The floating-top-controls needs proper layout as a flex container
-# Currently the children (.float-btn, .float-model, .mobile-float-btn) are all position:fixed individually
-# We need to make the parent a proper fixed container and children use normal flow
 
-# Fix: Add .floating-top-controls as a proper fixed flex row container
 floating_controls_css = """
   /* Floating Top Controls - proper flex row */
   .floating-top-controls {
@@ -119,20 +112,7 @@ floating_controls_css = """
     background: rgba(255, 255, 255, 0.12);
   }
 """
-
-# Find the closing of the first @media block and insert BEFORE the old .mobile-float-btn styles
-# We need to override the old individual positioning. Let's append at the end within the media query
-# Actually, let's add it right before the closing of the @media (max-width: 1023px) block
-
-# Find the last closing brace of the first @media block
-# The first @media block ends at the line with just "}"
-# Let's insert our new rules right before the end of the main mobile @media block
-
-# Find the position to insert - just before line that has the first standalone "}"
-# after the @media block content
-
-# Actually, let's just append these rules at the end of the file (outside any @media)
-# Wait, they should be inside the mobile @media query. Let me add a new @media block.
+.
 
 mobile_css += "\n\n" + "@media (max-width: 1023px) {\n" + floating_controls_css + "\n}\n"
 
@@ -142,16 +122,11 @@ with open(r'c:\Users\hp zbook\Desktop\LM\css\mobile.css', 'w', encoding='utf-8')
 print("[OK] mobile.css - floating controls fixed")
 
 
-# ============================================================
-# 2. FIX style.css - Desktop sidebar visible by default
-# ============================================================
 with open(r'c:\Users\hp zbook\Desktop\LM\css\style.css', 'r', encoding='utf-8', errors='replace') as f:
     css = f.read()
 
 css = css.replace('\x00', '')
 
-# On desktop, the sidebar should NOT respect .collapsed class
-# Replace the desktop .sidebar.collapsed rule to keep it visible
 old_collapsed = """  .sidebar.collapsed {
     width: 0 !important;
     min-width: 0 !important;
@@ -176,14 +151,9 @@ with open(r'c:\Users\hp zbook\Desktop\LM\css\style.css', 'w', encoding='utf-8') 
 print("[OK] style.css - desktop sidebar always visible")
 
 
-# ============================================================
-# 3. FIX index.html - Remove 'collapsed' from sidebar on desktop
-#    Also remove the mobile-only class from sidebar close button
-# ============================================================
 with open(r'c:\Users\hp zbook\Desktop\LM\index.html', 'r', encoding='utf-8') as f:
     html = f.read()
 
-# Make sidebar close button visible on all devices (remove mobile-only)
 html = html.replace(
     'onclick="UI.toggleSidebar()" class="icon-btn mobile-only"',
     'onclick="UI.toggleSidebar()" class="icon-btn sidebar-close-btn"'
