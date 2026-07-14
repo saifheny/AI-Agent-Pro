@@ -25,14 +25,12 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; font-family: 'Inter', -apple-system, system-ui, sans-serif; background: var(--bg); color: var(--text); overflow: hidden; }
 
-    /* === SPLIT LAYOUT === */
     .login-split {
       display: flex;
       height: 100vh;
       width: 100vw;
     }
 
-    /* LEFT PANEL - Branding */
     .login-brand {
       flex: 1.2;
       display: flex;
@@ -359,7 +357,6 @@
     .terms-row a { color: var(--accent); text-decoration: none; }
     .terms-row a:hover { text-decoration: underline; }
 
-    /* MOBILE */
     @media (max-width: 900px) {
       .login-split { flex-direction: column; }
       .login-brand { display: none; }
@@ -427,7 +424,6 @@
   .wavy-divider path { fill:#0a0a0b; stroke:rgba(255,255,255,.18); stroke-width:.8; }
   @media (max-width: 900px) { .login-form-panel { width: 100%; } }
 
-  /* Phone and tablet login is a complete screen, not a cropped desktop panel. */
   @media (max-width: 900px) {
     html, body { width:100%; min-height:100dvh; height:100dvh; overflow:auto; }
     .login-split { width:100%; min-height:100dvh; height:auto; }
@@ -683,7 +679,6 @@
       return{'auth/user-not-found':'لا يوجد حساب بهذا البريد','auth/wrong-password':'كلمة المرور غير صحيحة','auth/invalid-credential':'بيانات الدخول غير صحيحة','auth/email-already-in-use':'البريد مستخدم بالفعل','auth/weak-password':'كلمة المرور ضعيفة','auth/invalid-email':'بريد غير صالح','auth/too-many-requests':'محاولات كثيرة، حاول لاحقاً','auth/network-request-failed':'خطأ في الاتصال','auth/popup-blocked':'تم حظر النافذة المنبثقة، جاري التحويل...','auth/operation-not-allowed':'هذه الطريقة غير مفعلة في Firebase Console'}[c]||'حدث خطأ: '+c}
     document.getElementById('fPass').addEventListener('keydown',e=>{if(e.key==='Enter')doEmail()});
 
-    // Password toggle
     function togglePass() {
       const inp = document.getElementById('fPass');
       const icon = document.getElementById('eyeIcon');
@@ -696,7 +691,6 @@
       }
     }
 
-    // Password strength
     document.getElementById('fPass').addEventListener('input', function() {
       if (!isReg) return;
       const v = this.value;
@@ -715,7 +709,6 @@
       txt.textContent = 'قوة كلمة المرور: ' + l.t; txt.style.color = l.c;
     });
 
-    // Theme toggle
     let isDark = true;
     function toggleTheme() {
       isDark = !isDark;
