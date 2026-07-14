@@ -12,8 +12,7 @@ const UI = {
     this.loadTheme();
     this.setupDropZone();
     this.initApiManagers();
-    // API keys stay available in Settings; the old key prompt must never
-    // interrupt the first chat experience.
+
     const legacyWelcome = document.getElementById('welcome-api-modal');
     if (legacyWelcome) legacyWelcome.remove();
     this.renderModelsModal();
@@ -44,7 +43,6 @@ const UI = {
     this.theme = name;
     this.allThemes.forEach(t => document.body.classList.remove(t));
     document.body.classList.add('theme-' + name);
-
 
     const themeColor = name === 'dark' ? '#000000' : '#ffffff';
     document.querySelector('meta[name="theme-color"]')?.setAttribute('content', themeColor);
@@ -119,7 +117,6 @@ const UI = {
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('nav-' + toolId)?.classList.add('active');
 
-    // Also update fullscreen picker items if it exists
     document.querySelectorAll('.picker-item').forEach(b => b.classList.remove('active'));
     document.getElementById('picker-' + toolId)?.classList.add('active');
 
@@ -153,14 +150,12 @@ const UI = {
       const el1 = document.getElementById('account-stat-chats');
       if (el1) el1.textContent = chatCount;
 
-
       let msgCount = 0;
       if (Array.isArray(chats)) {
         chats.forEach(c => { if (c.messages) msgCount += c.messages.length; });
       }
       const el2 = document.getElementById('account-stat-msgs');
       if (el2) el2.textContent = msgCount;
-
 
       let keyCount = 0;
       ['openai','gemini','anthropic','groq','mistral','deepseek','alibaba','xai','perplexity'].forEach(p => {
@@ -170,10 +165,8 @@ const UI = {
       const el3 = document.getElementById('account-stat-keys');
       if (el3) el3.textContent = keyCount;
 
-
       const themeText = document.getElementById('theme-text');
       if (themeText) themeText.textContent = this.theme === 'dark' ? 'داكن' : 'فاتح';
-
 
       const authBtn = document.getElementById('dynamic-logout-btn');
       if (authBtn) {

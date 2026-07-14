@@ -5,10 +5,7 @@ const RouterPlugin = {
 
   async analyze(query) {
     const q = query.toLowerCase();
-    
-    
-    
-    
+
     const taskTypes = {
       CODING: ['code', 'برمجة', 'أكواد', 'javascript', 'python', 'html', 'css', 'react', 'node', 'sql', 'database', 'api', 'json', 'function', 'bug', 'fix', 'develop', 'برمجة', 'موقع'],
       RESEARCH: ['research', 'paper', 'arxiv', 'pubmed', 'scientific', 'بحث علمي', 'دراسة', 'أبحاث', 'تعلم', 'دراسات'],

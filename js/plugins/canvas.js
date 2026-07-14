@@ -17,8 +17,7 @@ const Canvas = {
     canvas.addEventListener('mousemove', this.draw.bind(this));
     canvas.addEventListener('mouseup', this.stopDrawing.bind(this));
     canvas.addEventListener('mouseout', this.stopDrawing.bind(this));
-    
-    
+
     canvas.addEventListener('touchstart', (e) => {
       e.preventDefault();
       const touch = e.touches[0];
@@ -49,8 +48,7 @@ const Canvas = {
     const parent = canvas.parentElement;
     canvas.width = parent.clientWidth;
     canvas.height = parent.clientHeight;
-    
-    
+
     this.ctx.fillStyle = '#0F172A'; 
     this.ctx.fillRect(0, 0, canvas.width, canvas.height);
   },

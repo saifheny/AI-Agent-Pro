@@ -8,7 +8,6 @@ const SearchPlugin = {
 
     const results = [];
 
-
     const promises = [];
 
     if (type === 'general' || type === 'news') {
@@ -71,10 +70,8 @@ const SearchPlugin = {
     return results;
   },
 
-
   async searchDuckDuckGo(query) {
     try {
-
 
       const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
       const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;

@@ -10,9 +10,6 @@ const BrowserPlugin = {
       const normalized = this.normalizeUrl(url);
       this.currentUrl = normalized;
 
-      // Try the source itself first (works for CORS-enabled open sources such
-      // as Wikimedia), then use reader-friendly public fallbacks for ordinary
-      // public pages. No API key or user data is sent by this feature.
       const candidates = [
         { url: normalized, type: 'html' },
         { url: `https://r.jina.ai/${normalized}`, type: 'text' },
@@ -42,7 +39,7 @@ const BrowserPlugin = {
 
   normalizeUrl(value) {
     const source = String(value || '').trim();
-    const candidate = /^https?:\/\//i.test(source) ? source : `https://${source}`;
+    const candidate = /^https?:\/\
     const parsed = new URL(candidate);
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only public HTTP(S) links are supported');
     return parsed.href;

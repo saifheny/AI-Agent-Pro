@@ -37,7 +37,7 @@
   <meta name="twitter:image:alt" content="AI Agent Pro — منصة الذكاء الاصطناعي">
   <title>AI Agent Pro — أقوى منصة ذكاء اصطناعي عربية 2026 | محادثات ذكية ومحرر أكواد</title>
   <script>
-    // Do not flash the workspace before a user has reached the sign-in page.
+    
     (() => {
       const signedIn = localStorage.getItem('ai_logged_in') === 'true';
       const profile = localStorage.getItem('ai_user');
@@ -79,7 +79,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/mobile.css">
   <script>
-    // ملفات PWA وService Worker لا تعمل من file://؛ لا نطلبها حتى لا تظهر أخطاء CORS مضللة.
+    
     if (location.protocol === 'http:' || location.protocol === 'https:') {
       const manifest = document.createElement('link');
       manifest.rel = 'manifest';
@@ -196,19 +196,17 @@
       transition: background 0.15s ease;
     }
   </style>
-  <!-- === SEO & Discoverability (2026) === -->
+  
   <meta name="description" content="AI Agent Pro - منصة الذكاء الاصطناعي الأقوى والأحدث لعام 2026. تدعم البحث المباشر، الرؤية الحاسوبية، وتوليد الصور والنصوص بأعلى كفاءة.">
   <meta name="keywords" content="AI, Artificial Intelligence, ChatGPT, Claude, Gemini, DeepSeek, ذكاء اصطناعي, شات جي بي تي, أداة ذكاء اصطناعي, 2026">
   <meta name="author" content="AI Agent Pro">
   <meta name="robots" content="index, follow">
 
-  <!-- Open Graph / Social Media -->
   <meta property="og:title" content="AI Agent Pro - مساعدك الذكي 2026">
   <meta property="og:description" content="تفاعل مع أحدث نماذج الذكاء الاصطناعي مع إمكانيات غير محدودة للبحث المباشر وتحليل الصور والمستندات.">
   <meta property="og:type" content="website">
   <meta property="og:image" content="ai_avatar.png">
 
-  <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="AI Agent Pro 2026">
   <meta name="twitter:description" content="أقوى منصة عربية للذكاء الاصطناعي الشامل.">
@@ -239,7 +237,6 @@
   <script src="js/plugins/search.js"></script>
   <script src="js/plugins/local-ai.js"></script>
 
-
   <script src="js/plugins/router.js"></script>
   <script src="js/plugins/memory.js"></script>
   <script src="js/plugins/thinking.js"></script>
@@ -248,7 +245,6 @@
   <script src="js/plugins/browser.js"></script>
   <script src="js/plugins/terminal.js"></script>
   <script src="js/plugins/canvas.js"></script>
-
 
   <div class="app-layout">
   <nav class="nav" id="main-nav">
@@ -299,7 +295,6 @@
     </div>
   </nav>
 
-
   <aside class="sidebar collapsed" id="sidebar">
     <div class="sidebar-header desktop-only" style="padding: 16px;">
       <div style="position:relative;">
@@ -308,7 +303,6 @@
                style="width:100%; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 35px 10px 12px; color:var(--text-primary); font-size:13px; outline:none;">
       </div>
     </div>
-
 
     <div class="sidebar-header mobile-only" style="padding: calc(var(--safe-top) + 16px) 16px 8px 16px; display:flex; flex-direction:column; gap:12px;">
       <div style="display:flex; justify-content:space-between; align-items:center; width: 100%;">
@@ -330,8 +324,6 @@
     <div id="chat-list" style="flex:1; overflow-y:auto; padding:10px 0 140px; padding-top: 70px;">
 
     </div>
-
-
 
     <div class="sidebar-footer">
       <div class="sidebar-user" onclick="UI.showModal('account-modal')" style="cursor:pointer; display:flex; align-items:center; gap:12px; width:100%; padding:10px;">
@@ -543,10 +535,6 @@
         </div>
         <div class="resizer" id="resizer" style="display:none" onmousedown="UI.startResize(event)"></div>
         <div class="chat-panel">
-
-
-
-
 
           <div class="messages" id="messages">
             <div class="welcome" id="welcome-screen">
@@ -1343,7 +1331,6 @@
       </div>
       <div class="modal-body" style="padding:0 20px 40px; background:var(--bg-primary); max-width: 480px; margin: 0 auto; width: 100%;">
 
-
         <div style="text-align:center; margin-bottom:28px; padding-top:8px;">
           <div style="position:relative; width:96px; height:96px; margin:0 auto 16px;">
             <div style="position:absolute; inset:-4px; border-radius:50%; background:linear-gradient(135deg, #3b82f6, #8b5cf6, #ec4899, #f59e0b); animation: avatarGlow 3s ease-in-out infinite; opacity:0.7;"></div>
@@ -1366,7 +1353,6 @@
           </div>
         </div>
 
-
         <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:24px;">
           <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:14px; padding:14px 8px; text-align:center;">
             <div style="font-size:20px; font-weight:800; color:var(--text-primary);" id="account-stat-chats">0</div>
@@ -1381,7 +1367,6 @@
             <div style="font-size:10px; color:var(--text-muted); font-weight:600; margin-top:2px;">مفتاح API</div>
           </div>
         </div>
-
 
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; padding:0 8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">المنصة</div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:16px; overflow:hidden; margin-bottom:20px;">
@@ -1431,7 +1416,6 @@
           </div>
         </div>
 
-
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; padding:0 8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">الحساب</div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:16px; overflow:hidden; margin-bottom:20px;">
           <div class="settings-row"
@@ -1473,7 +1457,6 @@
           </div>
         </div>
 
-
         <div style="font-size:11px; color:var(--text-muted); margin-bottom:8px; padding:0 8px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">حول</div>
         <div style="background:var(--bg-surface); border:1px solid var(--border-primary); border-radius:16px; overflow:hidden; margin-bottom:24px;">
           <div style="padding:14px 16px; display:flex; justify-content:space-between; align-items:center;">
@@ -1486,7 +1469,6 @@
             <span style="font-size:13px; color:var(--text-muted); font-family:'JetBrains Mono',monospace;">v3.0.0</span>
           </div>
         </div>
-
 
         <button id="dynamic-logout-btn"
           style="background:transparent; border:none; border-radius:16px; width:100%; color:#ef4444; font-size:15px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:8px; cursor:pointer; padding:16px; font-family:inherit; transition:all 0.2s;"
@@ -1756,7 +1738,6 @@
           </div>
           <i data-lucide="chevron-left" style="width:16px;height:16px;color:var(--text3);opacity:0.5"></i>
         </div>
-
 
         <div class="sheet-list-divider"></div>
 

@@ -315,15 +315,6 @@ const Main = {
     if (window.MemoryPlugin) window.MemoryPlugin.init().catch(console.error);
     this.checkVideoDownloaderStatus();
 
-
-
-
-
-
-
-
-
-
     const msgRoot = document.getElementById('messages');
     if (msgRoot) {
       msgRoot.addEventListener('click', (e) => {
@@ -460,7 +451,6 @@ const Main = {
       const emailBot = document.getElementById('account-email-bot');
       if (emailTop) emailTop.textContent = email;
       if (emailBot) emailBot.textContent = email;
-
 
       const sidebarFooterBtn = document.getElementById('sidebar-profile-btn');
       if (sidebarFooterBtn) {
@@ -1137,7 +1127,7 @@ const Main = {
     }
     if (family === 'local') {
       let base = (document.getElementById('local-ai-url')?.value || localStorage.getItem('local_ai_base_url') || apiUrl).trim();
-      if (!/^https?:\/\//.test(base)) base = 'http://' + base;
+      if (!/^https?:\/\
       if (!base.endsWith('/v1/chat/completions') && !base.endsWith('/api/chat')) {
          base = base.replace(/\/$/, '') + '/v1/chat/completions';
       }
@@ -1699,12 +1689,11 @@ const Main = {
     const isImageOnlyMsg = hasImage && !hasVoice && !userTypedText;
     const userMsg = { role: 'user', content: text, display: displayHtml, time: this.now(), isVoiceOnly: isVoiceOnlyMsg, isImageOnly: isImageOnlyMsg, hasMedia: hasVoice || hasImage, files: this.uploadedFiles.map(f => ({ ...f })) };
     this.messages.push(userMsg);
-    this.saveData(); // Persist immediately so a new voice can never replace prior chat history.
+    this.saveData(); 
     document.body.classList.add('has-conversation');
     this.appendMessage(userMsg, true);
     this.updateNavUI();
     if (!this.isIncognito) this.autoTitleChat();
-
 
     if (this.isVideoDownloaderConnected && (text.includes('youtube.com') || text.includes('youtu.be') || text.includes('tiktok.com'))) {
         const msgId = Date.now().toString();
@@ -1868,7 +1857,7 @@ const Main = {
               body: JSON.stringify(reqBody)
             });
             if (response.ok) break;
-            // أخطاء المفتاح أو النموذج أو الصلاحيات لا تتحسن بإعادة الطلب ثلاث مرات.
+            
             if (response.status !== 429 && response.status < 500) break;
             if (retries === 1) break;
           } catch (e) {
@@ -1904,7 +1893,6 @@ const Main = {
           const chat = this.chats.find(c => c.id === activeChatId);
           if (chat) chat.messages.push(aiMsg);
       }
-
 
       if (chatMsgs.length === 2 && !this.isIncognito) {
 
@@ -2217,7 +2205,6 @@ const Main = {
         }
         node.nodeValue += appended;
 
-
         const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
         if (isAtBottom && localStorage.getItem('autoscroll') !== 'false') {
           container.scrollTop = container.scrollHeight;
@@ -2241,7 +2228,7 @@ const Main = {
     if (!message) return;
 
     const input = document.getElementById('chat-input');
-    // استخدم محتوى الرسالة الأصلي بدلاً من قراءة واجهة المستخدم لتجنب وقت الصوت
+    
     input.value = message.content || '';
 
     if (message.files && message.files.length > 0) {
@@ -2307,16 +2294,14 @@ const Main = {
     });
     let html = marked.parse(processed);
 
-    // Deep Thinking UI Simulation (Code Sandbox & Logic)
     if (html.includes('<think>') || (typeof this.currentModel === 'string' && this.currentModel.includes('o1'))) {
        html = html.replace(/<think>([\s\S]*?)<\/think>/g, '<div class="deep-thinking-block"><div class="dt-header"><i data-lucide="brain"></i> تفكير عميق (Deep Thinking)</div><div class="dt-content">$1</div></div>');
-       // If no think tags but it's an o1 model, simulate one
+       
        if (!html.includes('deep-thinking-block')) {
          html = '<div class="deep-thinking-block"><div class="dt-header"><i data-lucide="brain"></i> تفكير عميق...</div><div class="dt-content">جاري التحليل المعقد...</div></div>' + html;
        }
     }
 
-    // Sandboxed Code
     if (html.includes('```')) {
       html = html.replace(/<button type="button" class="code-action-btn">/g, '<button type="button" class="code-action-btn sandbox-run-btn" onclick="alert(\'جاري تشغيل الكود في الحاوية البرمجية المعزولة...\')"><i data-lucide="play" style="width:12px;height:12px;margin-left:4px;"></i> تشغيل</button><button type="button" class="code-action-btn">');
     }
@@ -2574,14 +2559,13 @@ const Main = {
     this.voicePaused = false;
     this.recognitionShouldRestart = false;
 
-    // Forcefully stop hardware microphone tracks immediately
     if (this.micStream) {
       this.micStream.getTracks().forEach(t => t.stop());
       this.micStream = null;
     }
 
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.onstop = null; // Prevent saving the file
+      this.mediaRecorder.onstop = null; 
       this.mediaRecorder.stop();
     }
     if (this.recognition) {
@@ -2941,7 +2925,7 @@ ${m.display || m.content}`).join('\
     }, 500);
   },
   setupNetworkMonitor() {
-    // Disabled as per user request.
+    
   },
   recoverInput() {
     const input = document.getElementById('chat-input');
